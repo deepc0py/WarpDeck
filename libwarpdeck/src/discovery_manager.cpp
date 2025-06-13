@@ -42,9 +42,7 @@ bool DiscoveryManager::start(const std::string& device_name, const std::string& 
     return true;
 }
 
-void DiscoveryManager::create_platform_impl() {
-    // This will be implemented in platform-specific files
-}
+// create_platform_impl() is implemented in platform-specific files
 
 void DiscoveryManager::stop() {
     if (!running_) {
