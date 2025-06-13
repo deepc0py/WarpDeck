@@ -26,7 +26,10 @@
       "Bash(gh pr view:*)",
       "Bash(flutter:*)",
       "Bash(dart run:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(gh pr create:*)",
+      "Bash(./build_scripts/build_macos.sh:*)",
+      "Bash(open:*)"
     ],
     "deny": []
   }

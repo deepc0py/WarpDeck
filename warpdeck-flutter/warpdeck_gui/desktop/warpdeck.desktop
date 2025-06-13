@@ -1,0 +1,26 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=WarpDeck
+GenericName=File Sharing
+Comment=Cross-platform peer-to-peer file sharing
+Exec=warpdeck_gui
+Icon=warpdeck
+Terminal=false
+Categories=Network;FileTransfer;Utility;
+MimeType=application/x-warpdeck;
+Keywords=file;transfer;sharing;peer;network;
+StartupNotify=true
+StartupWMClass=warpdeck_gui
+
+[Desktop Action Send]
+Name=Send Files
+Exec=warpdeck_gui --send
+Icon=document-send
+
+[Desktop Action Discover]
+Name=Discover Devices
+Exec=warpdeck_gui --discover
+Icon=network-workgroup
+
+Actions=Send;Discover;

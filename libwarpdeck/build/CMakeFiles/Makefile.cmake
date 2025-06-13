@@ -85,4 +85,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/warpdeck.dir/DependInfo.cmake"
+  "CMakeFiles/warpdeck_shared.dir/DependInfo.cmake"
   )

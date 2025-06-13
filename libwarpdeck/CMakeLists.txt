@@ -70,37 +70,44 @@ elseif(WARPDECK_PLATFORM_LINUX)
     list(APPEND WARPDECK_SOURCES src/discovery_manager_linux.cpp)
 endif()
 
-# Create the static library
+# Create both static and shared libraries
 add_library(warpdeck STATIC ${WARPDECK_SOURCES})
+add_library(warpdeck_shared SHARED ${WARPDECK_SOURCES})
 
-# Set target properties
-target_include_directories(warpdeck
-    PUBLIC 
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+# Set target properties for both libraries
+foreach(target warpdeck warpdeck_shared)
+    target_include_directories(${target}
+        PUBLIC 
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
 
-target_link_libraries(warpdeck 
-    PRIVATE
-        OpenSSL::SSL 
-        OpenSSL::Crypto
-        Threads::Threads
-        httplib::httplib
-        nlohmann_json::nlohmann_json
-        ${PLATFORM_LIBRARIES}
-)
+    target_link_libraries(${target} 
+        PRIVATE
+            OpenSSL::SSL 
+            OpenSSL::Crypto
+            Threads::Threads
+            httplib::httplib
+            nlohmann_json::nlohmann_json
+            ${PLATFORM_LIBRARIES}
+    )
 
-target_compile_definitions(warpdeck PRIVATE ${PLATFORM_DEFINITIONS})
+    target_compile_definitions(${target} PRIVATE ${PLATFORM_DEFINITIONS})
+endforeach()
+
+# Set shared library output name
+set_target_properties(warpdeck_shared PROPERTIES OUTPUT_NAME "warpdeck")
 
 # Compiler-specific flags
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(warpdeck PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(warpdeck_shared PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 # Install targets
-install(TARGETS warpdeck
+install(TARGETS warpdeck warpdeck_shared
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin

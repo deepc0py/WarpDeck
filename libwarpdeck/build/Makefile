@@ -174,12 +174,26 @@ warpdeck/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/build
 .PHONY : warpdeck/fast
 
+#=============================================================================
+# Target rules for targets named warpdeck_shared
+
+# Build rule for target.
+warpdeck_shared: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 warpdeck_shared
+.PHONY : warpdeck_shared
+
+# fast build rule for target.
+warpdeck_shared/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/build
+.PHONY : warpdeck_shared/fast
+
 src/api_client.o: src/api_client.cpp.o
 .PHONY : src/api_client.o
 
 # target to build an object file
 src/api_client.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/api_client.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/api_client.cpp.o
 .PHONY : src/api_client.cpp.o
 
 src/api_client.i: src/api_client.cpp.i
@@ -188,6 +202,7 @@ src/api_client.i: src/api_client.cpp.i
 # target to preprocess a source file
 src/api_client.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/api_client.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/api_client.cpp.i
 .PHONY : src/api_client.cpp.i
 
 src/api_client.s: src/api_client.cpp.s
@@ -196,6 +211,7 @@ src/api_client.s: src/api_client.cpp.s
 # target to generate assembly for a file
 src/api_client.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/api_client.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/api_client.cpp.s
 .PHONY : src/api_client.cpp.s
 
 src/api_server.o: src/api_server.cpp.o
@@ -204,6 +220,7 @@ src/api_server.o: src/api_server.cpp.o
 # target to build an object file
 src/api_server.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/api_server.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/api_server.cpp.o
 .PHONY : src/api_server.cpp.o
 
 src/api_server.i: src/api_server.cpp.i
@@ -212,6 +229,7 @@ src/api_server.i: src/api_server.cpp.i
 # target to preprocess a source file
 src/api_server.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/api_server.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/api_server.cpp.i
 .PHONY : src/api_server.cpp.i
 
 src/api_server.s: src/api_server.cpp.s
@@ -220,6 +238,7 @@ src/api_server.s: src/api_server.cpp.s
 # target to generate assembly for a file
 src/api_server.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/api_server.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/api_server.cpp.s
 .PHONY : src/api_server.cpp.s
 
 src/discovery_manager.o: src/discovery_manager.cpp.o
@@ -228,6 +247,7 @@ src/discovery_manager.o: src/discovery_manager.cpp.o
 # target to build an object file
 src/discovery_manager.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/discovery_manager.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/discovery_manager.cpp.o
 .PHONY : src/discovery_manager.cpp.o
 
 src/discovery_manager.i: src/discovery_manager.cpp.i
@@ -236,6 +256,7 @@ src/discovery_manager.i: src/discovery_manager.cpp.i
 # target to preprocess a source file
 src/discovery_manager.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/discovery_manager.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/discovery_manager.cpp.i
 .PHONY : src/discovery_manager.cpp.i
 
 src/discovery_manager.s: src/discovery_manager.cpp.s
@@ -244,6 +265,7 @@ src/discovery_manager.s: src/discovery_manager.cpp.s
 # target to generate assembly for a file
 src/discovery_manager.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/discovery_manager.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/discovery_manager.cpp.s
 .PHONY : src/discovery_manager.cpp.s
 
 src/discovery_manager_macos.o: src/discovery_manager_macos.cpp.o
@@ -252,6 +274,7 @@ src/discovery_manager_macos.o: src/discovery_manager_macos.cpp.o
 # target to build an object file
 src/discovery_manager_macos.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/discovery_manager_macos.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/discovery_manager_macos.cpp.o
 .PHONY : src/discovery_manager_macos.cpp.o
 
 src/discovery_manager_macos.i: src/discovery_manager_macos.cpp.i
@@ -260,6 +283,7 @@ src/discovery_manager_macos.i: src/discovery_manager_macos.cpp.i
 # target to preprocess a source file
 src/discovery_manager_macos.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/discovery_manager_macos.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/discovery_manager_macos.cpp.i
 .PHONY : src/discovery_manager_macos.cpp.i
 
 src/discovery_manager_macos.s: src/discovery_manager_macos.cpp.s
@@ -268,6 +292,7 @@ src/discovery_manager_macos.s: src/discovery_manager_macos.cpp.s
 # target to generate assembly for a file
 src/discovery_manager_macos.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/discovery_manager_macos.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/discovery_manager_macos.cpp.s
 .PHONY : src/discovery_manager_macos.cpp.s
 
 src/security_manager.o: src/security_manager.cpp.o
@@ -276,6 +301,7 @@ src/security_manager.o: src/security_manager.cpp.o
 # target to build an object file
 src/security_manager.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/security_manager.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/security_manager.cpp.o
 .PHONY : src/security_manager.cpp.o
 
 src/security_manager.i: src/security_manager.cpp.i
@@ -284,6 +310,7 @@ src/security_manager.i: src/security_manager.cpp.i
 # target to preprocess a source file
 src/security_manager.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/security_manager.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/security_manager.cpp.i
 .PHONY : src/security_manager.cpp.i
 
 src/security_manager.s: src/security_manager.cpp.s
@@ -292,6 +319,7 @@ src/security_manager.s: src/security_manager.cpp.s
 # target to generate assembly for a file
 src/security_manager.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/security_manager.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/security_manager.cpp.s
 .PHONY : src/security_manager.cpp.s
 
 src/transfer_manager.o: src/transfer_manager.cpp.o
@@ -300,6 +328,7 @@ src/transfer_manager.o: src/transfer_manager.cpp.o
 # target to build an object file
 src/transfer_manager.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/transfer_manager.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/transfer_manager.cpp.o
 .PHONY : src/transfer_manager.cpp.o
 
 src/transfer_manager.i: src/transfer_manager.cpp.i
@@ -308,6 +337,7 @@ src/transfer_manager.i: src/transfer_manager.cpp.i
 # target to preprocess a source file
 src/transfer_manager.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/transfer_manager.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/transfer_manager.cpp.i
 .PHONY : src/transfer_manager.cpp.i
 
 src/transfer_manager.s: src/transfer_manager.cpp.s
@@ -316,6 +346,7 @@ src/transfer_manager.s: src/transfer_manager.cpp.s
 # target to generate assembly for a file
 src/transfer_manager.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/transfer_manager.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/transfer_manager.cpp.s
 .PHONY : src/transfer_manager.cpp.s
 
 src/utils.o: src/utils.cpp.o
@@ -324,6 +355,7 @@ src/utils.o: src/utils.cpp.o
 # target to build an object file
 src/utils.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/utils.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/utils.cpp.o
 .PHONY : src/utils.cpp.o
 
 src/utils.i: src/utils.cpp.i
@@ -332,6 +364,7 @@ src/utils.i: src/utils.cpp.i
 # target to preprocess a source file
 src/utils.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/utils.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/utils.cpp.i
 .PHONY : src/utils.cpp.i
 
 src/utils.s: src/utils.cpp.s
@@ -340,6 +373,7 @@ src/utils.s: src/utils.cpp.s
 # target to generate assembly for a file
 src/utils.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/utils.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/utils.cpp.s
 .PHONY : src/utils.cpp.s
 
 src/warpdeck.o: src/warpdeck.cpp.o
@@ -348,6 +382,7 @@ src/warpdeck.o: src/warpdeck.cpp.o
 # target to build an object file
 src/warpdeck.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/warpdeck.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/warpdeck.cpp.o
 .PHONY : src/warpdeck.cpp.o
 
 src/warpdeck.i: src/warpdeck.cpp.i
@@ -356,6 +391,7 @@ src/warpdeck.i: src/warpdeck.cpp.i
 # target to preprocess a source file
 src/warpdeck.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/warpdeck.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/warpdeck.cpp.i
 .PHONY : src/warpdeck.cpp.i
 
 src/warpdeck.s: src/warpdeck.cpp.s
@@ -364,6 +400,7 @@ src/warpdeck.s: src/warpdeck.cpp.s
 # target to generate assembly for a file
 src/warpdeck.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/src/warpdeck.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/src/warpdeck.cpp.s
 .PHONY : src/warpdeck.cpp.s
 
 # Help Target
@@ -379,6 +416,7 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... warpdeck"
+	@echo "... warpdeck_shared"
 	@echo "... src/api_client.o"
 	@echo "... src/api_client.i"
 	@echo "... src/api_client.s"
