@@ -1,0 +1,31 @@
+# FFI generation config for libwarpdeck
+name: 'WarpDeckFFI'
+description: 'FFI bindings for libwarpdeck'
+
+output: 'lib/services/libwarpdeck_ffi.dart'
+headers:
+  entry-points:
+    - '../../../libwarpdeck/include/warpdeck.h'
+
+include-directives:
+  - '../../../libwarpdeck/include/warpdeck.h'
+
+compiler-opts:
+  - '-I../../../libwarpdeck/include'
+
+functions:
+  include:
+    - 'warpdeck_.*'
+
+structs:
+  include:
+    - 'WarpDeckHandle'
+    - 'Callbacks'
+
+enums:
+  include:
+    - '.*'
+
+preamble: |
+  // Generated FFI bindings for libwarpdeck
+  // ignore_for_file: non_constant_identifier_names, unused_import

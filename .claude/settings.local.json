@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue list:*)",
+      "Bash(git checkout:*)",
+      "Bash(mkdir:*)",
+      "Bash(cmake:*)",
+      "Bash(make:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git reset:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(./warpdeck --help)",
+      "Bash(./warpdeck config --set-name \"Jesse's MacBook Pro\")",
+      "Bash(timeout:*)",
+      "Bash(./build/warpdeck:*)",
+      "Bash(ls:*)",
+      "Bash(otool:*)",
+      "Bash(strace:*)",
+      "Bash(grep:*)",
+      "Bash(echo:*)",
+      "Bash(g++:*)",
+      "Bash(find:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(flutter:*)",
+      "Bash(dart run:*)"
+    ],
+    "deny": []
+  }
+}
