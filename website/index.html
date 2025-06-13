@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WarpDeck - Cross-Platform Peer-to-Peer File Sharing</title>
+    <meta name="description" content="Secure, fast, and beautiful peer-to-peer file sharing for macOS, Linux, and Steam Deck. No cloud, no tracking, just direct device-to-device transfers.">
+    <meta name="keywords" content="file sharing, peer-to-peer, P2P, Steam Deck, macOS, Linux, open source, secure transfer">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://warpdeck.dev/">
+    <meta property="og:title" content="WarpDeck - Cross-Platform Peer-to-Peer File Sharing">
+    <meta property="og:description" content="Secure, fast, and beautiful peer-to-peer file sharing for macOS, Linux, and Steam Deck.">
+    <meta property="og:image" content="https://warpdeck.dev/assets/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://warpdeck.dev/">
+    <meta property="twitter:title" content="WarpDeck - Cross-Platform Peer-to-Peer File Sharing">
+    <meta property="twitter:description" content="Secure, fast, and beautiful peer-to-peer file sharing for macOS, Linux, and Steam Deck.">
+    <meta property="twitter:image" content="https://warpdeck.dev/assets/og-image.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="assets/logo.svg" alt="WarpDeck" class="nav-logo">
+                <span class="nav-title">WarpDeck</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#download" class="nav-link">Download</a>
+                <a href="#docs" class="nav-link">Docs</a>
+                <a href="https://github.com/deepc0py/WarpDeck" class="nav-link" target="_blank">GitHub</a>
+            </div>
+            <div class="nav-mobile-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Share Files <span class="hero-highlight">Directly</span>
+                    <br>Between Your Devices
+                </h1>
+                <p class="hero-description">
+                    WarpDeck brings secure, lightning-fast peer-to-peer file sharing to macOS, Linux, and Steam Deck. 
+                    No cloud required, no tracking, just direct device-to-device transfers with beautiful native apps.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#download" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2"/>
+                            <polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2"/>
+                            <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Download Now
+                    </a>
+                    <a href="https://github.com/deepc0py/WarpDeck" class="btn btn-secondary" target="_blank">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        View Source
+                    </a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-devices">
+                    <div class="device device-mac">
+                        <div class="device-screen">
+                            <div class="device-ui">
+                                <div class="ui-header">WarpDeck</div>
+                                <div class="ui-content">
+                                    <div class="peer-card">
+                                        <span class="peer-icon">🐧</span>
+                                        <span class="peer-name">Linux Desktop</span>
+                                        <span class="peer-status online">Online</span>
+                                    </div>
+                                    <div class="peer-card">
+                                        <span class="peer-icon">🎮</span>
+                                        <span class="peer-name">Steam Deck</span>
+                                        <span class="peer-status online">Online</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="device device-steamdeck">
+                        <div class="device-screen">
+                            <div class="device-ui">
+                                <div class="ui-header">WarpDeck</div>
+                                <div class="ui-content">
+                                    <div class="transfer-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill"></div>
+                                        </div>
+                                        <span class="progress-text">Receiving 42 files...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="transfer-beam"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Why Choose WarpDeck?</h2>
+                <p class="section-description">
+                    Built for privacy, optimized for performance, designed for simplicity.
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3 class="feature-title">Privacy First</h3>
+                    <p class="feature-description">
+                        Direct device-to-device transfers. Your files never touch the cloud or pass through our servers.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Lightning Fast</h3>
+                    <p class="feature-description">
+                        Transfer at full network speed with optimized protocols. No artificial limits or throttling.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎮</div>
+                    <h3 class="feature-title">Steam Deck Ready</h3>
+                    <p class="feature-description">
+                        Native Steam Deck support with touch controls, gamepad navigation, and Gaming Mode integration.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3 class="feature-title">Cross Platform</h3>
+                    <p class="feature-description">
+                        Works seamlessly between macOS, Linux, and Steam Deck with identical features on all platforms.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3 class="feature-title">Beautiful Interface</h3>
+                    <p class="feature-description">
+                        Modern Material Design 3 interface that feels native on every platform. Dark mode included.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3 class="feature-title">Open Source</h3>
+                    <p class="feature-description">
+                        Fully open source with MIT license. Contribute, audit, or customize to fit your needs.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="download">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Download WarpDeck</h2>
+                <p class="section-description">
+                    Choose your platform and start sharing files securely.
+                </p>
+            </div>
+            <div class="download-grid">
+                <div class="download-card">
+                    <div class="download-platform">
+                        <div class="platform-icon">💻</div>
+                        <h3>macOS</h3>
+                        <p>Universal Binary (Intel & Apple Silicon)</p>
+                    </div>
+                    <div class="download-info">
+                        <span class="download-size">25 MB</span>
+                        <span class="download-format">DMG Installer</span>
+                    </div>
+                    <a href="https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck-macOS.dmg" 
+                       class="btn btn-primary download-btn">
+                        Download for macOS
+                    </a>
+                    <div class="download-alt">
+                        <a href="#" class="download-alt-link">or install with Homebrew</a>
+                    </div>
+                </div>
+                
+                <div class="download-card">
+                    <div class="download-platform">
+                        <div class="platform-icon">🐧</div>
+                        <h3>Linux</h3>
+                        <p>Universal AppImage & Flatpak</p>
+                    </div>
+                    <div class="download-info">
+                        <span class="download-size">45 MB</span>
+                        <span class="download-format">AppImage</span>
+                    </div>
+                    <a href="https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck.AppImage" 
+                       class="btn btn-primary download-btn">
+                        Download for Linux
+                    </a>
+                    <div class="download-alt">
+                        <a href="#" class="download-alt-link">or install from Flathub</a>
+                    </div>
+                </div>
+                
+                <div class="download-card download-featured">
+                    <div class="download-platform">
+                        <div class="platform-icon">🎮</div>
+                        <h3>Steam Deck</h3>
+                        <p>Optimized for handheld gaming</p>
+                    </div>
+                    <div class="download-info">
+                        <span class="download-size">45 MB</span>
+                        <span class="download-format">AppImage</span>
+                    </div>
+                    <a href="https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck.AppImage" 
+                       class="btn btn-primary download-btn">
+                        Download for Steam Deck
+                    </a>
+                    <div class="download-alt">
+                        <a href="#steamdeck-guide" class="download-alt-link">Installation guide</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="download-meta">
+                <div class="version-info">
+                    <span class="current-version">Version 1.0.0</span>
+                    <span class="release-date">Released December 2024</span>
+                </div>
+                <div class="download-links">
+                    <a href="https://github.com/deepc0py/WarpDeck/releases" class="meta-link">All Releases</a>
+                    <a href="#" class="meta-link">Checksums</a>
+                    <a href="#" class="meta-link">Changelog</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section id="docs" class="docs">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Documentation</h2>
+                <p class="section-description">
+                    Everything you need to get started and make the most of WarpDeck.
+                </p>
+            </div>
+            <div class="docs-grid">
+                <div class="docs-card">
+                    <div class="docs-icon">🚀</div>
+                    <h3 class="docs-title">Quick Start</h3>
+                    <p class="docs-description">Get up and running in under 5 minutes with our step-by-step guide.</p>
+                    <a href="#" class="docs-link">Read Guide →</a>
+                </div>
+                <div class="docs-card">
+                    <div class="docs-icon">⚙️</div>
+                    <h3 class="docs-title">User Manual</h3>
+                    <p class="docs-description">Complete documentation covering all features and settings.</p>
+                    <a href="#" class="docs-link">View Manual →</a>
+                </div>
+                <div class="docs-card">
+                    <div class="docs-icon">🎮</div>
+                    <h3 class="docs-title">Steam Deck Guide</h3>
+                    <p class="docs-description">Special guide for installing and using WarpDeck on Steam Deck.</p>
+                    <a href="#" class="docs-link">Steam Deck →</a>
+                </div>
+                <div class="docs-card">
+                    <div class="docs-icon">🔧</div>
+                    <h3 class="docs-title">API Reference</h3>
+                    <p class="docs-description">Developer documentation for building integrations and extensions.</p>
+                    <a href="#" class="docs-link">API Docs →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section class="community">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Join the Community</h2>
+                <p class="section-description">
+                    Connect with other users, get support, and contribute to WarpDeck's development.
+                </p>
+            </div>
+            <div class="community-grid">
+                <a href="https://github.com/deepc0py/WarpDeck" class="community-card" target="_blank">
+                    <div class="community-icon">🐙</div>
+                    <h3>GitHub</h3>
+                    <p>Source code, issues, and contributions</p>
+                </a>
+                <a href="#" class="community-card" target="_blank">
+                    <div class="community-icon">💬</div>
+                    <h3>Discord</h3>
+                    <p>Real-time chat and community support</p>
+                </a>
+                <a href="#" class="community-card" target="_blank">
+                    <div class="community-icon">🗨️</div>
+                    <h3>Forums</h3>
+                    <p>Discussions and long-form support</p>
+                </a>
+                <a href="#" class="community-card" target="_blank">
+                    <div class="community-icon">📰</div>
+                    <h3>Blog</h3>
+                    <p>Updates, tutorials, and news</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <img src="assets/logo.svg" alt="WarpDeck" class="footer-logo">
+                <span class="footer-title">WarpDeck</span>
+                <p class="footer-description">
+                    Secure, fast, and beautiful peer-to-peer file sharing.
+                </p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#download">Download</a>
+                    <a href="#">Changelog</a>
+                    <a href="#">Roadmap</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="#docs">Documentation</a>
+                    <a href="#">FAQ</a>
+                    <a href="#">Contact</a>
+                    <a href="#">Bug Reports</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <a href="https://github.com/deepc0py/WarpDeck" target="_blank">GitHub</a>
+                    <a href="#">Discord</a>
+                    <a href="#">Forums</a>
+                    <a href="#">Contributing</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">License (MIT)</a>
+                    <a href="#">Security</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="footer-container">
+                <p>&copy; 2024 WarpDeck. Released under the MIT License.</p>
+                <div class="footer-social">
+                    <a href="https://github.com/deepc0py/WarpDeck" target="_blank" aria-label="GitHub">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
