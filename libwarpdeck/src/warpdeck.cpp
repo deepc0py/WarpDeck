@@ -187,19 +187,27 @@ int warpdeck_start(WarpDeckHandle* handle, const char* device_name, int desired_
         device_info.platform = utils::get_platform_name();
         device_info.protocol_version = "1.0";
         
+        std::cout << "Starting API server on port " << desired_port << "..." << std::endl;
         if (!handle->api_server->start(desired_port, device_info)) {
+            std::cerr << "API server start returned false" << std::endl;
             return -1;
         }
         
         handle->current_port = handle->api_server->get_port();
+        std::cout << "API server started, current_port = " << handle->current_port << std::endl;
         
         // Start discovery manager
+        std::cout << "Getting certificate fingerprint..." << std::endl;
         std::string fingerprint = handle->security_manager->get_certificate_fingerprint();
+        std::cout << "Got fingerprint: " << fingerprint.substr(0, 16) << "..." << std::endl;
+        std::cout << "Starting discovery manager..." << std::endl;
         if (!handle->discovery_manager->start(device_name, handle->device_id, 
                                             device_info.platform, handle->current_port, fingerprint)) {
+            std::cerr << "Discovery manager start failed" << std::endl;
             handle->api_server->stop();
             return -1;
         }
+        std::cout << "Discovery manager started successfully" << std::endl;
         
         handle->started = true;
         return handle->current_port;

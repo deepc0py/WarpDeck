@@ -165,6 +165,11 @@ bool file_exists(const std::string& path) {
 
 bool create_directory(const std::string& path) {
     try {
+        // Check if directory already exists
+        if (std::filesystem::exists(path)) {
+            return std::filesystem::is_directory(path);
+        }
+        // Create the directory and return success
         return std::filesystem::create_directories(path);
     } catch (const std::exception&) {
         return false;

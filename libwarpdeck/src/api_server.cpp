@@ -28,32 +28,46 @@ bool APIServer::start(int port, const DeviceInfo& device_info) {
     // Setup routes
     setup_routes();
     
-    // Start server
-    port_ = port;
-    std::thread server_thread([this, port]() {
-        try {
-            if (port == 0) {
-                // Find available port
-                for (int p = 54321; p < 65535; ++p) {
-                    if (server_->listen("0.0.0.0", p)) {
-                        port_ = p;
-                        break;
-                    }
-                }
-            } else {
-                server_->listen("0.0.0.0", port);
+    // Find available port if none specified
+    if (port == 0) {
+        for (int p = 54321; p < 65535; ++p) {
+            server_->set_read_timeout(1, 0);  // 1 second timeout for quick startup
+            server_->set_write_timeout(1, 0);
+            
+            // Test if port is available by trying to bind
+            if (server_->bind_to_port("0.0.0.0", p)) {
+                port_ = p;
+                std::cout << "Successfully bound to port " << port_ << std::endl;
+                break;
             }
+        }
+        if (port_ == 0) {
+            std::cerr << "No available port found in range 54321-65534" << std::endl;
+            return false; // No available port found
+        }
+    } else {
+        port_ = port;
+        if (!server_->bind_to_port("0.0.0.0", port_)) {
+            std::cerr << "Failed to bind to specified port " << port_ << std::endl;
+            return false; // Failed to bind to specified port
+        }
+        std::cout << "Successfully bound to specified port " << port_ << std::endl;
+    }
+    
+    // Start server in background thread
+    std::thread server_thread([this]() {
+        try {
+            server_->listen_after_bind();
         } catch (const std::exception& e) {
             std::cerr << "Server error: " << e.what() << std::endl;
+            running_ = false;
         }
     });
     server_thread.detach();
     
-    // Wait a bit for server to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    running_ = server_->is_running();
-    return running_;
+    // Mark as running since bind was successful
+    running_ = true;
+    return true;
 }
 
 void APIServer::stop() {
