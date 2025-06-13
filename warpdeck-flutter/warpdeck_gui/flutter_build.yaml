@@ -1,0 +1,15 @@
+# Flutter build configuration for production releases
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # Optimize JSON serialization for production
+          explicit_to_json: true
+          include_if_null: false
+          
+# Production optimization settings
+global_options:
+  build_runner:
+    options:
+      delete_conflicting_outputs: true

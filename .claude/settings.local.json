@@ -25,7 +25,8 @@
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
       "Bash(flutter:*)",
-      "Bash(dart run:*)"
+      "Bash(dart run:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
