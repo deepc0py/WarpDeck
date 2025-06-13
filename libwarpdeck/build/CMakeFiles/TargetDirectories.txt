@@ -1,4 +1,5 @@
 /Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles/warpdeck.dir
+/Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles/warpdeck_shared.dir
 /Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles/edit_cache.dir
 /Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles/rebuild_cache.dir
 /Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles/list_install_components.dir

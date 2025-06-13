@@ -1,0 +1,39 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=WarpDeck
+GenericName=File Sharing
+Comment=Cross-platform peer-to-peer file sharing optimized for Steam Deck
+Exec=/home/deck/Applications/WarpDeck.AppImage
+Icon=warpdeck
+Terminal=false
+Categories=Network;FileTransfer;Utility;Game;
+MimeType=application/x-warpdeck;
+Keywords=file;transfer;sharing;peer;network;steamdeck;
+StartupNotify=true
+StartupWMClass=warpdeck_gui
+X-Steam-Library-Paths=/home/deck/Applications/
+X-Steam-Executable=/home/deck/Applications/WarpDeck.AppImage
+
+# Steam Deck specific optimizations
+X-SteamDeck-TouchFriendly=true
+X-SteamDeck-GamepadSupport=true
+X-SteamDeck-HapticFeedback=true
+X-SteamDeck-BatteryAware=true
+
+[Desktop Action Send]
+Name=Send Files
+Exec=/home/deck/Applications/WarpDeck.AppImage --send
+Icon=document-send
+
+[Desktop Action Discover]
+Name=Discover Devices
+Exec=/home/deck/Applications/WarpDeck.AppImage --discover
+Icon=network-workgroup
+
+[Desktop Action GamingMode]
+Name=Gaming Mode Interface
+Exec=/home/deck/Applications/WarpDeck.AppImage --gaming-mode
+Icon=applications-games
+
+Actions=Send;Discover;GamingMode;

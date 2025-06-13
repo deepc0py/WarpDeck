@@ -22,30 +22,40 @@ flutter build macos --release --verbose
 
 # Create app bundle structure
 BUILD_DIR="build/macos/Build/Products/Release"
-APP_NAME="WarpDeck.app"
-APP_BUNDLE="$BUILD_DIR/$APP_NAME"
+ORIGINAL_APP="warpdeck_gui.app"
+FINAL_APP="WarpDeck.app"
+APP_BUNDLE="$BUILD_DIR/$FINAL_APP"
 
 echo "📦 Creating production app bundle..."
 
-# Copy libwarpdeck to the app bundle
-if [ -f "../../libwarpdeck/build/libwarpdeck.dylib" ]; then
-    echo "📚 Copying libwarpdeck.dylib to app bundle..."
-    mkdir -p "$APP_BUNDLE/Contents/Frameworks"
-    cp "../../libwarpdeck/build/libwarpdeck.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+# Rename the app bundle for production
+if [ -d "$BUILD_DIR/$ORIGINAL_APP" ]; then
+    echo "🏷️ Renaming app bundle to WarpDeck.app..."
+    cp -R "$BUILD_DIR/$ORIGINAL_APP" "$APP_BUNDLE"
     
-    # Update the library path in the executable
-    install_name_tool -change \
-        "libwarpdeck.dylib" \
-        "@executable_path/../Frameworks/libwarpdeck.dylib" \
-        "$APP_BUNDLE/Contents/MacOS/warpdeck_gui"
+    # Copy libwarpdeck to the app bundle
+    if [ -f "../../libwarpdeck/build/libwarpdeck.dylib" ]; then
+        echo "📚 Copying libwarpdeck.dylib to app bundle..."
+        mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+        cp "../../libwarpdeck/build/libwarpdeck.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+        
+        # Update the library path in the executable
+        install_name_tool -change \
+            "libwarpdeck.dylib" \
+            "@executable_path/../Frameworks/libwarpdeck.dylib" \
+            "$APP_BUNDLE/Contents/MacOS/warpdeck_gui"
+    else
+        echo "⚠️ Warning: libwarpdeck.dylib not found. Make sure to build libwarpdeck first."
+    fi
+    
+    # Create DMG installer
+    echo "💿 Creating DMG installer..."
+    DMG_NAME="WarpDeck-v1.0.0-macOS"
+    hdiutil create -volname "WarpDeck" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$BUILD_DIR/$DMG_NAME.dmg"
 else
-    echo "⚠️ Warning: libwarpdeck.dylib not found. Make sure to build libwarpdeck first."
+    echo "❌ Error: Could not find built app at $BUILD_DIR/$ORIGINAL_APP"
+    exit 1
 fi
-
-# Create DMG installer
-echo "💿 Creating DMG installer..."
-DMG_NAME="WarpDeck-v1.0.0-macOS"
-hdiutil create -volname "WarpDeck" -srcfolder "$APP_BUNDLE" -ov -format UDZO "$BUILD_DIR/$DMG_NAME.dmg"
 
 echo "✅ macOS build complete!"
 echo "📍 App bundle: $APP_BUNDLE"

@@ -64,12 +64,14 @@ CMAKE_BINARY_DIR = /Users/jesse/code/WarpDeck/libwarpdeck/build
 
 # The main recursive "all" target.
 all: CMakeFiles/warpdeck.dir/all
+all: CMakeFiles/warpdeck_shared.dir/all
 all: _deps/httplib-build/all
 all: _deps/nlohmann_json-build/all
 .PHONY : all
 
 # The main recursive "codegen" target.
 codegen: CMakeFiles/warpdeck.dir/codegen
+codegen: CMakeFiles/warpdeck_shared.dir/codegen
 codegen: _deps/httplib-build/codegen
 codegen: _deps/nlohmann_json-build/codegen
 .PHONY : codegen
@@ -81,6 +83,7 @@ preinstall: _deps/nlohmann_json-build/preinstall
 
 # The main recursive "clean" target.
 clean: CMakeFiles/warpdeck.dir/clean
+clean: CMakeFiles/warpdeck_shared.dir/clean
 clean: _deps/httplib-build/clean
 clean: _deps/nlohmann_json-build/clean
 .PHONY : clean
@@ -154,6 +157,38 @@ CMakeFiles/warpdeck.dir/codegen:
 CMakeFiles/warpdeck.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck.dir/build.make CMakeFiles/warpdeck.dir/clean
 .PHONY : CMakeFiles/warpdeck.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/warpdeck_shared.dir
+
+# All Build rule for target.
+CMakeFiles/warpdeck_shared.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles --progress-num=10,11,12,13,14,15,16,17,18 "Built target warpdeck_shared"
+.PHONY : CMakeFiles/warpdeck_shared.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/warpdeck_shared.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles 9
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/warpdeck_shared.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles 0
+.PHONY : CMakeFiles/warpdeck_shared.dir/rule
+
+# Convenience name for target.
+warpdeck_shared: CMakeFiles/warpdeck_shared.dir/rule
+.PHONY : warpdeck_shared
+
+# codegen rule for target.
+CMakeFiles/warpdeck_shared.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/jesse/code/WarpDeck/libwarpdeck/build/CMakeFiles --progress-num=10,11,12,13,14,15,16,17,18 "Finished codegen for target warpdeck_shared"
+.PHONY : CMakeFiles/warpdeck_shared.dir/codegen
+
+# clean rule for target.
+CMakeFiles/warpdeck_shared.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/warpdeck_shared.dir/build.make CMakeFiles/warpdeck_shared.dir/clean
+.PHONY : CMakeFiles/warpdeck_shared.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

@@ -40,6 +40,12 @@ dependencies:
   json_annotation: ^4.9.0
   uuid: ^3.0.6
   
+  # Update system
+  http: ^1.2.2
+  package_info_plus: ^8.0.3
+  version: ^3.0.2
+  url_launcher: ^6.3.1
+  
   # UI enhancements
   animations: ^2.0.11
   lottie: ^3.1.2
@@ -73,10 +79,9 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # Assets for the application
+  assets:
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
