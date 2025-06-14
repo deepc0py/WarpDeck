@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <cstdint>
 
 struct FileInfo {
     std::string name;
