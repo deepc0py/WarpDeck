@@ -1,197 +1,27 @@
-name: Build and Release
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  release:
-    types: [ published ]
-
-env:
-  FLUTTER_VERSION: '3.22.2'
-  CMAKE_VERSION: '3.15'
-
-jobs:
-  build-macos:
-    name: Build macOS
-    runs-on: macos-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-
-    - name: Install dependencies
+- name: Create AppImage
       run: |
-        # Install Homebrew dependencies for libwarpdeck
-        brew install openssl brotli pkg-config
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
-
-    - name: Install C++ dependencies
-      run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
-
-    - name: Build libwarpdeck
-      run: |
-        cd libwarpdeck
-        rm -rf build
-        mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-              ..
-        make -j$(sysctl -n hw.ncpu)
-        cd ../..
-
-    - name: Build CLI
-      run: |
-        cd warpdeck-cli
-        rm -rf build
-        mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-              ..
-        make -j$(sysctl -n hw.ncpu)
-        cd ../..
-
-    - name: Build Flutter GUI
-      run: |
-        cd warpdeck-flutter/warpdeck_gui
-        flutter pub get
-        dart run build_runner build --delete-conflicting-outputs
-        flutter build macos --release
-
-    - name: Fix macOS dependencies
-      run: |
-        cd warpdeck-flutter/warpdeck_gui
-        chmod +x fix_macos_dependencies.sh
-        ./fix_macos_dependencies.sh
-
-    - name: Create DMG
-      run: |
-        cd warpdeck-flutter/warpdeck_gui/build/macos/Build/Products/Release
-        
-        # Create a temporary directory for DMG contents
-        mkdir -p dmg_temp
-        cp -R warpdeck_gui.app dmg_temp/WarpDeck.app
-        
-        # Create Applications symlink
-        ln -s /Applications dmg_temp/Applications
-        
-        # Create DMG
-        hdiutil create -volname "WarpDeck" -srcfolder dmg_temp -ov -format UDZO WarpDeck-macOS.dmg
-        
-        # Move DMG to root for upload
-        mv WarpDeck-macOS.dmg ../../../../../..
-
-    - name: Upload macOS artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: warpdeck-macos
-        path: |
-          WarpDeck-macOS.dmg
-          warpdeck-cli/build/warpdeck
-
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          pkg-config \
-          libssl-dev \
-          libavahi-client-dev \
-          libgtk-3-dev \
-          ninja-build \
-          clang \
-          libayatana-appindicator3-dev
-
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: 'stable'
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
-
-    - name: Install C++ dependencies
-      run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
-
-    - name: Build libwarpdeck
-      run: |
-        cd libwarpdeck
-        rm -rf build
-        mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-              ..
-        make -j$(nproc)
-        cd ../..
-
-    - name: Build CLI
-      run: |
-        cd warpdeck-cli
-        rm -rf build
-        mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-              ..
-        make -j$(nproc)
-        cd ../..
-
-    - name: Build Flutter GUI
-      run: |
-        cd warpdeck-flutter/warpdeck_gui
-        flutter pub get
-        dart run build_runner build --delete-conflicting-outputs
-        flutter build linux --release
-
-    - name: Create AppImage
-      run: |
-        # Download AppImage tools
+        # Download and prepare AppImage tool
         wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool-x86_64.AppImage
-        
-        # Extract the AppImage tool since FUSE is not available in CI
         ./appimagetool-x86_64.AppImage --appimage-extract
         APPIMAGE_TOOL="$(pwd)/squashfs-root/AppRun"
         
+        # Navigate to the built application bundle
         cd warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
         
-        # Create AppDir structure
+        # Create the AppDir structure
         mkdir -p WarpDeck.AppDir/usr/bin
         mkdir -p WarpDeck.AppDir/usr/share/applications
         mkdir -p WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
         
-        # Copy application files (exclude the AppDir we just created)
+        # Copy application files into the AppDir
         for item in *; do
           if [ "$item" != "WarpDeck.AppDir" ]; then
             cp -r "$item" WarpDeck.AppDir/usr/bin/
           fi
         done
         
-        # Create desktop file
+        # Create the .desktop file
         cat > WarpDeck.AppDir/usr/share/applications/warpdeck.desktop << EOF
         [Desktop Entry]
         Type=Application
@@ -201,18 +31,32 @@ jobs:
         Icon=warpdeck
         Categories=Network;FileTransfer;
         EOF
+        cp WarpDeck.AppDir/usr/share/applications/warpdeck.desktop WarpDeck.AppDir/
         
-        # Copy icon from Flutter assets
-        if [ -f "usr/bin/data/flutter_assets/assets/icons/warpdeck.svg" ]; then
-          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.svg WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.svg
-          # Also copy to root for AppImage
-          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.svg WarpDeck.AppDir/warpdeck.svg
-        elif [ -f "usr/bin/data/flutter_assets/assets/icons/app_icon.png" ]; then
-          cp usr/bin/data/flutter_assets/assets/icons/app_icon.png WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
-          cp usr/bin/data/flutter_assets/assets/icons/app_icon.png WarpDeck.AppDir/warpdeck.png
+        # --- ICON CONVERSION AND PLACEMENT ---
+        SOURCE_SVG="usr/bin/data/flutter_assets/assets/icons/warpdeck.svg"
+        DEST_PNG="WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png"
+        
+        echo "Looking for source icon at: $(pwd)/$SOURCE_SVG"
+        if [ -f "$SOURCE_SVG" ]; then
+          echo "✅ Source icon found. Converting to PNG..."
+          rsvg-convert -w 256 -h 256 -o "$DEST_PNG" "$SOURCE_SVG"
+          # Also copy the icon to the root of the AppDir
+          cp "$DEST_PNG" WarpDeck.AppDir/warpdeck.png
+          echo "Icon converted and placed in AppDir."
+        else
+          echo "⚠️ WARNING: Source SVG icon not found at $SOURCE_SVG. AppImage icon will be missing."
         fi
         
-        # Create AppRun
+        # --- DEBUGGING ---
+        echo "--- Verifying file locations ---"
+        echo "Listing root of AppDir:"
+        ls -l WarpDeck.AppDir
+        echo "Listing icon directory:"
+        ls -l WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
+        echo "--- Verification complete ---"
+        
+        # Create AppRun executable
         cat > WarpDeck.AppDir/AppRun << EOF
         #!/bin/bash
         HERE="\$(dirname "\$(readlink -f "\${0}")")"
@@ -220,157 +64,5 @@ jobs:
         EOF
         chmod +x WarpDeck.AppDir/AppRun
         
-        # Copy desktop file to root
-        cp WarpDeck.AppDir/usr/share/applications/warpdeck.desktop WarpDeck.AppDir/
-        
-        
-        # Build AppImage
-        if [ ! -f "$APPIMAGE_TOOL" ]; then
-          echo "❌ AppImage tool not found at $APPIMAGE_TOOL"
-          exit 1
-        fi
-        "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
-        
-        # Move AppImage to root for upload
-        mv WarpDeck.AppImage ../../../../../..
-
-    - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: warpdeck-linux
-        path: |
-          WarpDeck.AppImage
-          warpdeck-cli/build/warpdeck
-
-  release:
-    name: Create Release
-    needs: [build-macos, build-linux]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Download macOS artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: warpdeck-macos
-        path: ./artifacts/macos
-
-    - name: Download Linux artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: warpdeck-linux
-        path: ./artifacts/linux
-
-    - name: Generate release tag
-      id: tag
-      run: |
-        # Create a tag based on date and commit
-        TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
-        echo "Generated tag: $TAG"
-
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.tag }}
-        release_name: WarpDeck ${{ steps.tag.outputs.tag }}
-        body: |
-          ## WarpDeck Release ${{ steps.tag.outputs.tag }}
-          
-          🚀 **Automatic build from latest main branch**
-          
-          ### 📦 Downloads
-          
-          | Platform | Download | Size | Format |
-          |----------|----------|------|--------|
-          | **macOS** | [WarpDeck-macOS.dmg](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/WarpDeck-macOS.dmg) | ~25 MB | Universal Binary |
-          | **Linux** | [WarpDeck.AppImage](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/WarpDeck.AppImage) | ~45 MB | Portable |
-          | **Steam Deck** | [WarpDeck.AppImage](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/WarpDeck.AppImage) | ~45 MB | Optimized |
-          
-          ### 🔧 CLI Tools
-          - macOS CLI: [warpdeck-cli-macos](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/warpdeck-cli-macos)
-          - Linux CLI: [warpdeck-cli-linux](https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/warpdeck-cli-linux)
-          
-          ### ✨ What's Included
-          - 🔒 Privacy-first peer-to-peer file sharing
-          - ⚡ Lightning-fast transfers over local network
-          - 🎮 Steam Deck optimized with touch controls
-          - 🌐 Cross-platform: macOS ↔ Linux ↔ Steam Deck
-          - 🎨 Beautiful Material Design 3 interface
-          
-          ### 📝 Changes in this Build
-          Built from commit: [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          
-          ---
-          
-          **🔗 Quick Install:**
-          ```bash
-          # macOS
-          curl -L -o WarpDeck.dmg https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/WarpDeck-macOS.dmg
-          
-          # Linux/Steam Deck
-          wget https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/WarpDeck.AppImage
-          chmod +x WarpDeck.AppImage
-          ```
-        draft: false
-        prerelease: false
-
-    - name: Upload macOS DMG
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/macos/WarpDeck-macOS.dmg
-        asset_name: WarpDeck-macOS.dmg
-        asset_content_type: application/x-apple-diskimage
-
-    - name: Upload Linux AppImage
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/linux/WarpDeck.AppImage
-        asset_name: WarpDeck.AppImage
-        asset_content_type: application/x-executable
-
-    - name: Upload macOS CLI
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/macos/warpdeck
-        asset_name: warpdeck-cli-macos
-        asset_content_type: application/x-executable
-
-    - name: Upload Linux CLI
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/linux/warpdeck
-        asset_name: warpdeck-cli-linux
-        asset_content_type: application/x-executable
-
-    - name: Update latest release
-      run: |
-        # Tag this release as 'latest' for the download links in README
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        
-        # Delete existing latest tag if it exists
-        git tag -d latest 2>/dev/null || true
-        git push origin :refs/tags/latest 2>/dev/null || true
-        
-        # Create new latest tag
-        git tag latest
-        git push origin latest
+        # Build the final AppImage
+        "$APPIMAGE_TOOL" WarpDeck.AppDir ../../../../../../WarpDeck.AppImage
