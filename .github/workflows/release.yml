@@ -375,36 +375,35 @@ fi
         ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
         
         # Create AppRun with enhanced library loading
-        cat > WarpDeck.AppDir/AppRun << EOF
-        #!/bin/bash
-        HERE="\$(dirname "\$(readlink -f "\${0}")")"
-        
-        # Debug information for library loading issues
-        if [ "\$WARPDECK_DEBUG" = "1" ]; then
-            echo "🔍 WarpDeck AppImage Debug Info:"
-            echo "   AppImage location: \$HERE"
-            echo "   Library directory: \${HERE}/usr/lib"
-            echo "   Available libraries:"
-            ls -la "\${HERE}/usr/lib" | grep -E "(ayatana|dbusmenu)" || echo "     No system tray libraries found"
-            echo "   Current LD_LIBRARY_PATH: \$LD_LIBRARY_PATH"
-        fi
-        
-        # Add bundled libraries to LD_LIBRARY_PATH for Steam Deck/Arch compatibility
-        export LD_LIBRARY_PATH="\${HERE}/usr/lib:\${LD_LIBRARY_PATH}"
-        
-        # Ensure library directory is accessible
-        if [ ! -d "\${HERE}/usr/lib" ]; then
-            echo "⚠️  Warning: Library directory not found in AppImage"
-        fi
-        
-        # Run the application
-        exec "\${HERE}/usr/bin/warpdeck_gui" "\$@"
-        EOF
+        cat > WarpDeck.AppDir/AppRun << 'EOF'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+
+# Debug information for library loading issues
+if [ "$WARPDECK_DEBUG" = "1" ]; then
+    echo "🔍 WarpDeck AppImage Debug Info:"
+    echo "   AppImage location: $HERE"
+    echo "   Library directory: ${HERE}/usr/lib"
+    echo "   Available libraries:"
+    ls -la "${HERE}/usr/lib" | grep -E "(ayatana|dbusmenu)" || echo "     No system tray libraries found"
+    echo "   Current LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+fi
+
+# Add bundled libraries to LD_LIBRARY_PATH for Steam Deck/Arch compatibility
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+
+# Ensure library directory is accessible
+if [ ! -d "${HERE}/usr/lib" ]; then
+    echo "⚠️  Warning: Library directory not found in AppImage"
+fi
+
+# Run the application
+exec "${HERE}/usr/bin/warpdeck_gui" "$@"
+EOF
         chmod +x WarpDeck.AppDir/AppRun
         
         # Copy desktop file to root
         cp WarpDeck.AppDir/usr/share/applications/warpdeck.desktop WarpDeck.AppDir/
-        
         
         # Build AppImage
         if [ ! -f "$APPIMAGE_TOOL" ]; then
