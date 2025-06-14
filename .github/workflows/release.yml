@@ -299,13 +299,11 @@ jobs:
         ls -la WarpDeck.AppDir/warpdeck.png
         ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
         
-        # Create simple AppRun script
-        cat > WarpDeck.AppDir/AppRun << 'APPRUN_SCRIPT'
-#!/bin/bash
-HERE="$(dirname "$(readlink -f "${0}")")"
-export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
-exec "${HERE}/usr/bin/warpdeck_gui" "$@"
-APPRUN_SCRIPT
+        # Create AppRun script
+        echo '#!/bin/bash' > WarpDeck.AppDir/AppRun
+        echo 'HERE="$(dirname "$(readlink -f "${0}")")"' >> WarpDeck.AppDir/AppRun
+        echo 'export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"' >> WarpDeck.AppDir/AppRun
+        echo 'exec "${HERE}/usr/bin/warpdeck_gui" "$@"' >> WarpDeck.AppDir/AppRun
         chmod +x WarpDeck.AppDir/AppRun
         
         # Copy desktop file to root
