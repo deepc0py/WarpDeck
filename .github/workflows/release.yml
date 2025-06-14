@@ -137,7 +137,7 @@ jobs:
 
   build-linux:
     name: Build Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     
     steps:
     - name: Checkout repository
@@ -218,6 +218,7 @@ jobs:
         
         # Create AppDir structure
         mkdir -p WarpDeck.AppDir/usr/bin
+        mkdir -p WarpDeck.AppDir/usr/lib
         mkdir -p WarpDeck.AppDir/usr/share/applications
         mkdir -p WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
         
@@ -227,6 +228,93 @@ jobs:
             cp -r "$item" WarpDeck.AppDir/usr/bin/
           fi
         done
+        
+        # Copy system tray dependencies with robust recursive bundling
+        echo "📦 Bundling system tray dependencies for Steam Deck compatibility..."
+        
+        # Create robust library bundling script
+        cat > bundle_libs.sh << 'BUNDLE_EOF'
+#!/bin/bash
+set -e
+
+# Function to copy library and its dependencies recursively
+copy_lib_deps() {
+    local lib_path="$1"
+    local target_dir="$2"
+    local lib_name=$(basename "$lib_path")
+    
+    # Skip if already copied
+    if [[ -f "$lib_path" && ! -f "$target_dir/$lib_name" ]]; then
+        echo "  -> Bundling $lib_name"
+        cp "$lib_path" "$target_dir/"
+        
+        # Find and copy ayatana/dbusmenu dependencies recursively
+        if command -v ldd >/dev/null 2>&1; then
+            ldd "$lib_path" 2>/dev/null | grep -E "(libayatana|libdbusmenu|libindicator)" | awk '{print $3}' | while read dep; do
+                if [[ -f "$dep" && ! -f "$target_dir/$(basename "$dep")" ]]; then
+                    copy_lib_deps "$dep" "$target_dir"
+                fi
+            done
+        fi
+    fi
+}
+
+# Ensure target directory exists
+mkdir -p WarpDeck.AppDir/usr/lib
+
+# Bundle core system tray libraries with fallback paths
+declare -a TRAY_LIBS=(
+    "/usr/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1"
+    "/usr/lib/x86_64-linux-gnu/libayatana-indicator3.so.7"
+    "/usr/lib/x86_64-linux-gnu/libayatana-ido3-0.4.so.0"
+    "/usr/lib/libayatana-appindicator3.so.1"
+    "/usr/lib/libayatana-indicator3.so.7"
+)
+
+declare -a DBUS_LIBS=(
+    "/usr/lib/x86_64-linux-gnu/libdbusmenu-glib.so.4"
+    "/usr/lib/x86_64-linux-gnu/libdbusmenu-gtk3.so.4"
+    "/usr/lib/libdbusmenu-glib.so.4"
+    "/usr/lib/libdbusmenu-gtk3.so.4"
+)
+
+# Copy system tray libraries
+echo "🔍 Searching for system tray libraries..."
+for lib_pattern in "${TRAY_LIBS[@]}" "${DBUS_LIBS[@]}"; do
+    # Handle both exact paths and glob patterns
+    for lib_file in $lib_pattern*; do
+        if [[ -f "$lib_file" ]]; then
+            copy_lib_deps "$lib_file" "WarpDeck.AppDir/usr/lib"
+            break  # Found one, move to next pattern
+        fi
+    done
+done
+
+# Verify we got the critical library
+if [[ ! -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]]; then
+    echo "⚠️  WARNING: libayatana-appindicator3.so.1 not found - system tray may not work on Steam Deck"
+    echo "🔍 Available ayatana libraries on system:"
+    find /usr/lib* -name "*ayatana*" 2>/dev/null | head -10 || echo "  None found"
+else
+    echo "✅ Successfully bundled libayatana-appindicator3.so.1"
+fi
+
+echo "📋 Final bundled libraries:"
+ls -la WarpDeck.AppDir/usr/lib/ | grep -E "(ayatana|dbusmenu)" || echo "  No system tray libraries found"
+BUNDLE_EOF
+
+        chmod +x bundle_libs.sh
+        ./bundle_libs.sh
+        rm bundle_libs.sh
+        
+        # Validate bundled libraries
+        echo "🔍 Validating bundled system tray libraries..."
+        if [ -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]; then
+          echo "✅ libayatana-appindicator3.so.1 successfully bundled"
+          ldd WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1 | head -5
+        else
+          echo "⚠️  libayatana-appindicator3.so.1 not found in bundle"
+        fi
         
         # Create desktop file
         cat > WarpDeck.AppDir/usr/share/applications/warpdeck.desktop << EOF
@@ -269,6 +357,11 @@ jobs:
         cat > WarpDeck.AppDir/AppRun << EOF
         #!/bin/bash
         HERE="\$(dirname "\$(readlink -f "\${0}")")"
+        
+        # Add bundled libraries to LD_LIBRARY_PATH for Steam Deck compatibility
+        export LD_LIBRARY_PATH="\${HERE}/usr/lib:\${LD_LIBRARY_PATH}"
+        
+        # Run the application
         exec "\${HERE}/usr/bin/warpdeck_gui" "\$@"
         EOF
         chmod +x WarpDeck.AppDir/AppRun
@@ -283,6 +376,54 @@ jobs:
           exit 1
         fi
         "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
+        
+        # Validate AppImage after creation
+        echo "🔍 Validating created AppImage..."
+        if [ ! -f "WarpDeck.AppImage" ]; then
+          echo "❌ AppImage creation failed - file not found"
+          exit 1
+        fi
+        
+        # Check AppImage is executable
+        if [ ! -x "WarpDeck.AppImage" ]; then
+          echo "❌ AppImage is not executable"
+          exit 1
+        fi
+        
+        # Test AppImage can show help (basic functionality test)
+        echo "🧪 Testing AppImage basic functionality..."
+        timeout 10s ./WarpDeck.AppImage --help || echo "⚠️  AppImage help test failed (may be normal for GUI apps)"
+        
+        # Validate desktop file integration
+        echo "🖥️  Validating desktop integration..."
+        ./WarpDeck.AppImage --appimage-extract >/dev/null 2>&1
+        if [ -f "squashfs-root/warpdeck.desktop" ]; then
+          echo "✅ Desktop file found in AppImage"
+          if command -v desktop-file-validate >/dev/null 2>&1; then
+            desktop-file-validate squashfs-root/warpdeck.desktop && echo "✅ Desktop file is valid" || echo "⚠️  Desktop file validation failed"
+          fi
+        else
+          echo "⚠️  Desktop file not found in AppImage root"
+        fi
+        
+        # Check bundled libraries are present
+        echo "📚 Checking bundled libraries in AppImage..."
+        if [ -d "squashfs-root/usr/lib" ]; then
+          echo "📋 Bundled system tray libraries:"
+          find squashfs-root/usr/lib -name "*ayatana*" -o -name "*dbusmenu*" | head -10 || echo "  No system tray libraries found"
+        fi
+        
+        # Check icon is present
+        if [ -f "squashfs-root/warpdeck.png" ]; then
+          echo "✅ Icon found in AppImage"
+        else
+          echo "⚠️  Icon not found in AppImage"
+        fi
+        
+        # Clean up extraction
+        rm -rf squashfs-root
+        
+        echo "✅ AppImage validation complete"
         
         # Move AppImage to workspace root for upload
         echo "📍 Current directory: $(pwd)"

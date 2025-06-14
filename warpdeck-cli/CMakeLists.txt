@@ -8,8 +8,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find libwarpdeck
 find_library(WARPDECK_LIBRARY 
     NAMES warpdeck libwarpdeck
-    PATHS ${CMAKE_SOURCE_DIR}/../libwarpdeck/build
-    NO_DEFAULT_PATH
+    PATHS 
+        ${CMAKE_SOURCE_DIR}/../libwarpdeck/build
+        ${CMAKE_BINARY_DIR}/../libwarpdeck
+        ${CMAKE_CURRENT_SOURCE_DIR}/../libwarpdeck/build
+        /usr/local/lib
+        /usr/lib
+        /usr/lib/x86_64-linux-gnu
+        /usr/lib64
+    DOC "WarpDeck library path"
 )
 
 if(NOT WARPDECK_LIBRARY)
