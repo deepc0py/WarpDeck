@@ -82,7 +82,7 @@ jobs:
         
         # Create a temporary directory for DMG contents
         mkdir -p dmg_temp
-        cp -R WarpDeck.app dmg_temp/
+        cp -R warpdeck_gui.app dmg_temp/WarpDeck.app
         
         # Create Applications symlink
         ln -s /Applications dmg_temp/Applications
@@ -220,7 +220,13 @@ jobs:
         fi
         
         # Build AppImage
-        ../../../../../appimagetool-x86_64.AppImage WarpDeck.AppDir WarpDeck.AppImage
+        APPIMAGE_TOOL="../../../../../appimagetool-x86_64.AppImage"
+        if [ ! -f "$APPIMAGE_TOOL" ]; then
+          echo "❌ AppImage tool not found at $APPIMAGE_TOOL"
+          ls -la ../../../../../
+          exit 1
+        fi
+        "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
         
         # Move AppImage to root for upload
         mv WarpDeck.AppImage ../../../../../..
