@@ -173,6 +173,9 @@ jobs:
         wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool-x86_64.AppImage
         
+        # Store the absolute path to the AppImage tool
+        APPIMAGE_TOOL="$(pwd)/appimagetool-x86_64.AppImage"
+        
         cd warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
         
         # Create AppDir structure
@@ -220,10 +223,8 @@ jobs:
         fi
         
         # Build AppImage
-        APPIMAGE_TOOL="../../../../../appimagetool-x86_64.AppImage"
         if [ ! -f "$APPIMAGE_TOOL" ]; then
           echo "❌ AppImage tool not found at $APPIMAGE_TOOL"
-          ls -la ../../../../../
           exit 1
         fi
         "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
