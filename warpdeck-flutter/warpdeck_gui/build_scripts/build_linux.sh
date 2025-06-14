@@ -59,15 +59,11 @@ EOF
 # Copy desktop file to standard location
 cp "$APPDIR/warpdeck.desktop" "$APPDIR/usr/share/applications/"
 
-# Create simple icon (placeholder)
-#cat > "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg" << 'EOF'
-#<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-#  <rect width="256" height="256" fill="#2196F3"/>
-#  <text x="128" y="140" text-anchor="middle" fill="white" font-size="48" font-family="sans-serif">WD</text>
-#</svg>
-#EOF
+# Copy the icon to the standard icon location within the AppDir
+echo "🖼️ Copying icon..."
+cp "../assets/icons/warpdeck.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg"
 
-#cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg" "$APPDIR/warpdeck.svg"
+# It's also good practice to place the icon at the root of the AppDir
 cp "../assets/icons/warpdeck.svg" "$APPDIR/warpdeck.svg"
 
 # Create AppRun script
