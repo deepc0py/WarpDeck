@@ -53,7 +53,7 @@ public:
         // Register service and start browsing will happen in client callback
         
         // Start processing thread
-        processing_thread_ = std::thread(&Impl::process_events, this);
+        processing_thread_ = std::thread(&DiscoveryManagerLinux::process_events, this);
         
         return true;
     }
@@ -94,8 +94,73 @@ public:
     }
 
 private:
+    void register_service() {
+        if (!client_) return;
+        
+        if (group_) {
+            avahi_entry_group_reset(group_);
+        } else {
+            group_ = avahi_entry_group_new(client_, group_callback, this);
+            if (!group_) {
+                std::cerr << "Failed to create Avahi entry group" << std::endl;
+                return;
+            }
+        }
+        
+        // Create TXT record
+        std::string txt_data = "v=1.0&id=" + device_id_ + "&name=" + device_name_ + 
+                              "&platform=" + platform_ + "&port=" + std::to_string(port_) + 
+                              "&fp=" + fingerprint_;
+        
+        int ret = avahi_entry_group_add_service(
+            group_,
+            AVAHI_IF_UNSPEC,
+            AVAHI_PROTO_UNSPEC,
+            static_cast<AvahiPublishFlags>(0),
+            device_name_.c_str(),
+            "_warpdeck._tcp",
+            nullptr,
+            nullptr,
+            port_,
+            txt_data.c_str(),
+            nullptr
+        );
+        
+        if (ret < 0) {
+            std::cerr << "Failed to add service: " << avahi_strerror(ret) << std::endl;
+            return;
+        }
+        
+        ret = avahi_entry_group_commit(group_);
+        if (ret < 0) {
+            std::cerr << "Failed to commit entry group: " << avahi_strerror(ret) << std::endl;
+        }
+    }
+    
+    void start_browsing() {
+        if (!client_) return;
+        
+        avahi_service_browser_new(
+            client_,
+            AVAHI_IF_UNSPEC,
+            AVAHI_PROTO_UNSPEC,
+            "_warpdeck._tcp",
+            nullptr,
+            static_cast<AvahiLookupFlags>(0),
+            browse_callback,
+            this
+        );
+    }
+    
+    void process_events() {
+        while (running_ && simple_poll_) {
+            if (avahi_simple_poll_iterate(simple_poll_, 100) != 0) {
+                break;
+            }
+        }
+    }
     static void client_callback(AvahiClient* client, AvahiClientState state, void* userdata) {
-        auto* impl = static_cast<Impl*>(userdata);
+        auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         switch (state) {
             case AVAHI_CLIENT_S_RUNNING:
@@ -214,7 +279,7 @@ private:
                               const char* domain,
                               AvahiLookupResultFlags flags,
                               void* userdata) {
-        auto* impl = static_cast<Impl*>(userdata);
+        auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         switch (event) {
             case AVAHI_BROWSER_NEW:
@@ -263,7 +328,7 @@ private:
                                AvahiStringList* txt,
                                AvahiLookupResultFlags flags,
                                void* userdata) {
-        auto* impl = static_cast<Impl*>(userdata);
+        auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         if (event == AVAHI_RESOLVER_FOUND) {
             // Parse TXT record
