@@ -233,8 +233,8 @@ jobs:
         echo "📦 Bundling system tray dependencies for Steam Deck compatibility..."
         
         # Create robust library bundling script
-        cat > bundle_libs.sh << 'BUNDLE_EOF'
-#!/bin/bash
+        cat > bundle_libs.sh << 'EOF'
+        #!/bin/bash
 set -e
 
 # Function to copy library and its dependencies recursively
@@ -301,7 +301,7 @@ fi
 
 echo "📋 Final bundled libraries:"
 ls -la WarpDeck.AppDir/usr/lib/ | grep -E "(ayatana|dbusmenu)" || echo "  No system tray libraries found"
-BUNDLE_EOF
+        EOF
 
         chmod +x bundle_libs.sh
         ./bundle_libs.sh
