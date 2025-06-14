@@ -5,7 +5,7 @@
 
 set -e
 
-APP_BUNDLE="/Users/jesse/code/WarpDeck/warpdeck-flutter/warpdeck_gui/build/macos/Build/Products/Release/warpdeck_gui.app"
+APP_BUNDLE="build/macos/Build/Products/Release/warpdeck_gui.app"
 MACOS_DIR="$APP_BUNDLE/Contents/MacOS"
 DYLIB_PATH="$MACOS_DIR/libwarpdeck.dylib"
 
@@ -19,7 +19,7 @@ fi
 
 # Copy the latest libwarpdeck.dylib
 echo "📦 Copying libwarpdeck.dylib..."
-cp "/Users/jesse/code/WarpDeck/libwarpdeck/build/libwarpdeck.dylib" "$DYLIB_PATH"
+cp "../../libwarpdeck/build/libwarpdeck.dylib" "$DYLIB_PATH"
 
 # Copy OpenSSL dependencies
 echo "📦 Copying OpenSSL libraries..."
