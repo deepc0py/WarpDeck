@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../utils/app_theme.dart';
 
 class PlatformInfo {
   final bool isSteamDeck;
@@ -45,63 +47,93 @@ class PlatformService {
     return _cachedInfo!;
   }
 
-  /// Detect if running on Steam Deck
+  /// Detect if running on Steam Deck with robust error handling
   bool _detectSteamDeck() {
     if (!Platform.isLinux) return false;
 
+    var steamDeckScore = 0;
+    var detectionMethods = <String>[];
+
     try {
-      // Check for Steam Deck specific files and environment
-      const steamDeckIndicators = [
-        '/sys/devices/virtual/dmi/id/product_name', // Contains "Jupiter"
-        '/sys/devices/virtual/dmi/id/board_name',   // Contains "Jupiter"
-        '/home/deck/.steam',                        // Steam Deck user directory
+      // Method 1: DMI detection (most reliable)
+      const dmiPaths = [
+        '/sys/devices/virtual/dmi/id/product_name',
+        '/sys/devices/virtual/dmi/id/board_name',
       ];
 
-      for (final path in steamDeckIndicators) {
-        final file = File(path);
-        if (file.existsSync()) {
-          if (path.contains('dmi')) {
-            final content = file.readAsStringSync().toLowerCase();
+      for (final path in dmiPaths) {
+        try {
+          final file = File(path);
+          if (file.existsSync()) {
+            final content = file.readAsStringSync().toLowerCase().trim();
             if (content.contains('jupiter') || content.contains('steamdeck')) {
-              return true;
+              steamDeckScore += 10;
+              detectionMethods.add('DMI: $path');
             }
-          } else {
-            return true; // Steam directory exists
           }
+        } catch (e) {
+          if (kDebugMode) print('DMI check failed for $path: $e');
         }
       }
 
-      // Check environment variables
-      final steamDeckEnvs = [
-        'STEAM_COMPAT_DATA_PATH',
-        'SteamDeck',
-        'GAMESCOPE_WAYLAND_DISPLAY',
-      ];
+      // Method 2: Steam directory (less reliable, but good indicator)
+      try {
+        if (Directory('/home/deck/.steam').existsSync()) {
+          steamDeckScore += 5;
+          detectionMethods.add('Steam directory');
+        }
+      } catch (e) {
+        if (kDebugMode) print('Steam directory check failed: $e');
+      }
 
+      // Method 3: Environment variables
+      const steamDeckEnvs = ['STEAM_COMPAT_DATA_PATH', 'SteamDeck', 'GAMESCOPE_WAYLAND_DISPLAY'];
       for (final envVar in steamDeckEnvs) {
         if (Platform.environment.containsKey(envVar)) {
-          return true;
+          steamDeckScore += 3;
+          detectionMethods.add('ENV: $envVar');
         }
       }
 
-      // Check for Steam Deck specific processes
-      final result = Process.runSync('ps', ['aux']);
-      if (result.exitCode == 0) {
-        final processes = result.stdout.toString().toLowerCase();
-        if (processes.contains('steamdeck') || 
-            processes.contains('gamescope') ||
-            processes.contains('steamos')) {
-          return true;
+      // Method 4: Process detection (least reliable)
+      try {
+        final result = Process.runSync('pgrep', ['-f', 'gamescope|steamos']);
+        if (result.exitCode == 0) {
+          steamDeckScore += 2;
+          detectionMethods.add('Process detection');
         }
+      } catch (e) {
+        if (kDebugMode) print('Process detection failed: $e');
       }
+
+      // Method 5: Hardware detection (CPU model)
+      try {
+        final cpuInfo = File('/proc/cpuinfo');
+        if (cpuInfo.existsSync()) {
+          final content = cpuInfo.readAsStringSync().toLowerCase();
+          if (content.contains('amd custom apu') || content.contains('van gogh')) {
+            steamDeckScore += 7;
+            detectionMethods.add('CPU detection');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) print('CPU detection failed: $e');
+      }
+
+      final isSteamDeck = steamDeckScore >= 10;
+      
+      if (kDebugMode) {
+        print('Steam Deck detection score: $steamDeckScore (threshold: 10)');
+        print('Detection methods: ${detectionMethods.join(', ')}');
+        print('Result: ${isSteamDeck ? 'Steam Deck detected' : 'Not Steam Deck'}');
+      }
+
+      return isSteamDeck;
 
     } catch (e) {
-      if (kDebugMode) {
-        print('Error detecting Steam Deck: $e');
-      }
+      if (kDebugMode) print('Steam Deck detection error: $e');
+      return false;
     }
-
-    return false;
   }
 
   String _getDeviceType(bool isSteamDeck) {
@@ -202,5 +234,47 @@ class PlatformService {
     }
     
     return null;
+  }
+
+  /// Get optimal theme based on platform and screen size
+  ThemeData getOptimalTheme(Size screenSize, {bool isDarkMode = false}) {
+    final info = getPlatformInfo();
+    
+    // Base theme
+    ThemeData baseTheme = isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme;
+    
+    // Apply Steam Deck optimizations if detected
+    if (info.isSteamDeck) {
+      return SteamDeckTheme.getSteamDeckTheme(baseTheme);
+    }
+    
+    // Apply responsive optimizations based on screen size
+    if (ResponsiveBreakpoints.isSteamDeckResolution(screenSize)) {
+      // Even if not detected as Steam Deck, optimize for the resolution
+      return SteamDeckTheme.getSteamDeckTheme(baseTheme);
+    }
+    
+    return baseTheme;
+  }
+
+  /// Get layout configuration based on screen size and platform
+  Map<String, dynamic> getLayoutConfig(Size screenSize) {
+    final info = getPlatformInfo();
+    
+    return {
+      'columnCount': ResponsiveBreakpoints.getColumnCount(screenSize),
+      'padding': ResponsiveBreakpoints.getScreenPadding(screenSize),
+      'spacing': ResponsiveBreakpoints.getSpacing(screenSize),
+      'isSteamDeckOptimized': info.isSteamDeck || ResponsiveBreakpoints.isSteamDeckResolution(screenSize),
+      'touchTargetSize': getTouchTargetSize(),
+      'uiScale': getUIScale(),
+      'isHandheldMode': info.isHandheld || ResponsiveBreakpoints.isSteamDeckResolution(screenSize),
+    };
+  }
+
+  /// Get Steam Deck specific gaming mode theme
+  ThemeData? getSteamDeckGamingTheme() {
+    if (!getPlatformInfo().isSteamDeck) return null;
+    return SteamDeckTheme.steamDeckGamingTheme;
   }
 }
