@@ -59,13 +59,42 @@ EOF
 # Copy desktop file to standard location
 cp "$APPDIR/warpdeck.desktop" "$APPDIR/usr/share/applications/"
 
-# Copy the icon to the standard icon location within the AppDir
-# The path is now relative to the project root, where this script is executed from.
-echo "🖼️ Copying icon..."
-cp "assets/icons/warpdeck.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg"
+# === START ICON FIX ===
 
-# It's also good practice to place the icon at the root of the AppDir
-cp "assets/icons/warpdeck.svg" "$APPDIR/warpdeck.svg"
+# Define icon paths
+SOURCE_ICON_SVG="assets/icons/warpdeck.svg"
+ICON_NAME="warpdeck"
+TARGET_ICON_DIR="$APPDIR/usr/share/icons/hicolor/256x256/apps"
+TARGET_ICON_PNG="$TARGET_ICON_DIR/${ICON_NAME}.png"
+
+echo "🖼️ Converting SVG to PNG for AppImage compatibility..."
+
+# Check if source icon exists before converting
+echo "   -> Checking for source SVG: $SOURCE_ICON_SVG"
+ls -l "$SOURCE_ICON_SVG"
+
+# Convert SVG to PNG using rsvg-convert
+rsvg-convert -w 256 -h 256 -o "$TARGET_ICON_PNG" "$SOURCE_ICON_SVG"
+
+# The .desktop file uses 'Icon=warpdeck', so 'warpdeck.png' must exist
+# in the standard icon path within the AppDir.
+echo "   -> Copied PNG to: $TARGET_ICON_PNG"
+
+# It's also good practice to place the icon, named after the app, at the root of the AppDir.
+# The AppImage tool often uses this for the AppImage's own icon.
+cp "$TARGET_ICON_PNG" "$APPDIR/${ICON_NAME}.png"
+echo "   -> Copied PNG to root of AppDir: $APPDIR/${ICON_NAME}.png"
+
+# --- DEBUGGING: List the contents of the key directories ---
+echo "--- Verifying file locations ---"
+echo "Listing root of AppDir:"
+ls -l "$APPDIR"
+echo "Listing icon directory:"
+ls -l "$TARGET_ICON_DIR"
+echo "--- Verification complete ---"
+
+# === END ICON FIX ===
+
 
 # Create AppRun script
 cat > "$APPDIR/AppRun" << 'EOF'
