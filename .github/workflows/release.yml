@@ -301,8 +301,8 @@ jobs:
     - name: Prepare CLI assets with correct names
       run: |
         # Copy CLI binaries with correct names for release
-        cp ./artifacts/macos/warpdeck ./artifacts/macos/warpdeck-cli-macos
-        cp ./artifacts/linux/warpdeck ./artifacts/linux/warpdeck-cli-linux
+        cp ./artifacts/macos/warpdeck-cli/build/warpdeck ./artifacts/macos/warpdeck-cli-macos
+        cp ./artifacts/linux/warpdeck-cli/build/warpdeck ./artifacts/linux/warpdeck-cli-linux
 
     - name: Generate release tag
       id: tag
