@@ -122,7 +122,8 @@ jobs:
           ninja-build \
           clang \
           libayatana-appindicator3-dev \
-          librsvg2-bin
+          librsvg2-bin \
+          imagemagick
 
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -203,15 +204,43 @@ jobs:
         Categories=Network;FileTransfer;
         EOF
         
-        # Copy icon from Flutter assets and convert SVG to PNG
-        if [ -f "usr/bin/data/flutter_assets/assets/icons/warpdeck.svg" ]; then
+        # Copy and prepare icons for AppImage
+        echo "🔍 Searching for icon files..."
+        find . -name "*warpdeck*" -type f | head -10
+        find . -name "*icon*" -type f | grep -E "\.(png|svg)$" | head -10
+        
+        ICON_COPIED=false
+        
+        # Try PNG first (direct copy)
+        if [ -f "usr/bin/data/flutter_assets/assets/icons/warpdeck.png" ]; then
+          echo "✅ Found PNG icon, copying directly..."
+          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.png WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
+          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.png WarpDeck.AppDir/warpdeck.png
+          ICON_COPIED=true
+        # Try SVG conversion
+        elif [ -f "usr/bin/data/flutter_assets/assets/icons/warpdeck.svg" ]; then
           echo "✅ Found SVG icon, converting to PNG..."
           rsvg-convert -w 256 -h 256 -o WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png usr/bin/data/flutter_assets/assets/icons/warpdeck.svg
-          # Also copy to root for AppImage
           cp WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png WarpDeck.AppDir/warpdeck.png
+          ICON_COPIED=true
+        # Fallback to any app_icon
         elif [ -f "usr/bin/data/flutter_assets/assets/icons/app_icon.png" ]; then
+          echo "⚠️  Using fallback app_icon.png..."
           cp usr/bin/data/flutter_assets/assets/icons/app_icon.png WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
           cp usr/bin/data/flutter_assets/assets/icons/app_icon.png WarpDeck.AppDir/warpdeck.png
+          ICON_COPIED=true
+        else
+          echo "❌ No suitable icon found! Creating placeholder..."
+          # Create a simple colored square as placeholder
+          convert -size 256x256 xc:'#2196F3' WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
+          cp WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png WarpDeck.AppDir/warpdeck.png
+          ICON_COPIED=true
+        fi
+        
+        if [ "$ICON_COPIED" = "true" ]; then
+          echo "✅ Icon successfully placed at:"
+          ls -la WarpDeck.AppDir/warpdeck.png
+          ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
         fi
         
         # Create AppRun
