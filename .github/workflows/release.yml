@@ -180,8 +180,12 @@ jobs:
         mkdir -p WarpDeck.AppDir/usr/share/applications
         mkdir -p WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
         
-        # Copy application files
-        cp -r * WarpDeck.AppDir/usr/bin/
+        # Copy application files (exclude the AppDir we just created)
+        for item in *; do
+          if [ "$item" != "WarpDeck.AppDir" ]; then
+            cp -r "$item" WarpDeck.AppDir/usr/bin/
+          fi
+        done
         
         # Create desktop file
         cat > WarpDeck.AppDir/usr/share/applications/warpdeck.desktop << EOF
