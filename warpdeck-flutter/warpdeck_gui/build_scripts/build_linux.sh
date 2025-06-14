@@ -60,11 +60,12 @@ EOF
 cp "$APPDIR/warpdeck.desktop" "$APPDIR/usr/share/applications/"
 
 # Copy the icon to the standard icon location within the AppDir
+# The path is now relative to the project root, where this script is executed from.
 echo "🖼️ Copying icon..."
-cp "../assets/icons/warpdeck.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg"
+cp "assets/icons/warpdeck.svg" "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg"
 
 # It's also good practice to place the icon at the root of the AppDir
-cp "../assets/icons/warpdeck.svg" "$APPDIR/warpdeck.svg"
+cp "assets/icons/warpdeck.svg" "$APPDIR/warpdeck.svg"
 
 # Create AppRun script
 cat > "$APPDIR/AppRun" << 'EOF'
