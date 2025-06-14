@@ -26,6 +26,13 @@ Makefile
 .pub-cache/
 .pub/
 pubspec.lock
+*.iml
+
+# macOS Flutter/iOS dependencies
+**/Pods/
+**/Podfile.lock
+**/*.xcworkspace/
+**/*.xcodeproj/xcuserdata/
 
 # IDE files
 .vscode/
