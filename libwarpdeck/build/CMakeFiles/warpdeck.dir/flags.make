@@ -6,7 +6,7 @@ CXX_DEFINES = -DCPPHTTPLIB_BROTLI_SUPPORT -DCPPHTTPLIB_OPENSSL_SUPPORT -DCPPHTTP
 
 CXX_INCLUDES = -I/Users/jesse/code/WarpDeck/libwarpdeck/include -I/Users/jesse/code/WarpDeck/libwarpdeck/src -I/Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/nlohmann_json-src/include -F/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks -isystem /opt/homebrew/Cellar/openssl@3/3.5.0/include -isystem /Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/httplib-src -isystem /opt/homebrew/Cellar/brotli/1.1.0/include
 
-CXX_FLAGSarm64 = -O3 -DNDEBUG -std=gnu++17 -arch arm64 -Wall -Wextra -Wpedantic
+CXX_FLAGSarm64 = -std=gnu++17 -arch arm64 -Wall -Wextra -Wpedantic
 
-CXX_FLAGS = -O3 -DNDEBUG -std=gnu++17 -arch arm64 -Wall -Wextra -Wpedantic
+CXX_FLAGS = -std=gnu++17 -arch arm64 -Wall -Wextra -Wpedantic
 

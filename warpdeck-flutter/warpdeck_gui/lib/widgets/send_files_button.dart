@@ -366,6 +366,6 @@ class _SendFilesDialogState extends ConsumerState<SendFilesDialog> {
   }
 
   int _getTotalSize() {
-    return selectedFiles.fold(0, (sum, file) => sum + (file.size ?? 0));
+    return selectedFiles.fold(0, (sum, file) => sum + file.size);
   }
 }

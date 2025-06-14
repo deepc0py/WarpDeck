@@ -1001,6 +1001,7 @@ CMakeFiles/warpdeck_shared.dir/src/discovery_manager.cpp.o: \
   /Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/nlohmann_json-src/include/nlohmann/thirdparty/hedley/hedley.hpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/cassert \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_assert.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_static_assert.h \
   /Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/nlohmann_json-src/include/nlohmann/detail/string_escape.hpp \
   /Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/nlohmann_json-src/include/nlohmann/detail/input/position_t.hpp \

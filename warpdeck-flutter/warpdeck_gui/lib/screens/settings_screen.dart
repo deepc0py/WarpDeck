@@ -32,7 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final warpDeckState = ref.watch(warpDeckServiceProvider);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,8 +53,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: 'How this device appears to others',
                 trailing: _isEditing
                     ? SizedBox(
-                        width: 200,
+                        width: 280,
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Expanded(
                               child: TextField(
@@ -72,16 +73,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             const SizedBox(width: 8),
                             IconButton(
                               icon: Icon(MdiIcons.check, color: Colors.green),
-                              onPressed: _saveDeviceName,
+                              onPressed: () => _saveDeviceName(),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                             ),
                             IconButton(
                               icon: Icon(MdiIcons.close, color: Colors.red),
                               onPressed: _cancelEdit,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                             ),
                           ],
                         ),
                       )
                     : Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             warpDeckState.deviceName ?? 'Not set',
@@ -91,6 +97,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           IconButton(
                             icon: Icon(MdiIcons.pencil, size: 16),
                             onPressed: _startEdit,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
@@ -352,11 +360,38 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: trailing,
+    return InkWell(
       onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 16),
+              trailing!,
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

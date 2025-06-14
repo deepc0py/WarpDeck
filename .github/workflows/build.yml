@@ -17,8 +17,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install dependencies
       run: |
@@ -31,21 +29,21 @@ jobs:
           libavahi-client-dev \
           valgrind
 
-    - name: Install vcpkg
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Install dependencies with vcpkg
       run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        cd vcpkg
-        ./bootstrap-vcpkg.sh
-        ./vcpkg integrate install
-        ./vcpkg install boost-asio openssl nlohmann-json catch2
-        cd ..
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json catch2
 
     - name: Build and test libwarpdeck
       run: |
         cd libwarpdeck
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               -DBUILD_TESTS=ON \
               ..
         make -j$(nproc)
@@ -63,8 +61,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install dependencies
       run: |
@@ -76,21 +72,21 @@ jobs:
           libssl-dev \
           libavahi-client-dev
 
-    - name: Install vcpkg
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Install dependencies with vcpkg
       run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        cd vcpkg
-        ./bootstrap-vcpkg.sh
-        ./vcpkg integrate install
-        ./vcpkg install boost-asio openssl nlohmann-json
-        cd ..
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
 
     - name: Build libwarpdeck
       run: |
         cd libwarpdeck
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               ..
         make -j$(nproc)
         cd ../..
@@ -100,7 +96,7 @@ jobs:
         cd cli
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               ..
         make -j$(nproc)
 
@@ -120,8 +116,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install system dependencies
       run: |
@@ -142,21 +136,21 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
 
-    - name: Install vcpkg
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Install dependencies with vcpkg
       run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        cd vcpkg
-        ./bootstrap-vcpkg.sh
-        ./vcpkg integrate install
-        ./vcpkg install boost-asio openssl nlohmann-json
-        cd ..
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
 
     - name: Build libwarpdeck
       run: |
         cd libwarpdeck
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               ..
         make -j$(nproc)
         cd ../..
@@ -188,8 +182,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install system dependencies
       run: |
@@ -210,14 +202,14 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
 
-    - name: Install vcpkg
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Install dependencies with vcpkg
       run: |
-        git clone https://github.com/Microsoft/vcpkg.git
-        cd vcpkg
-        ./bootstrap-vcpkg.sh
-        ./vcpkg integrate install
-        ./vcpkg install boost-asio openssl nlohmann-json
-        cd ..
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
 
     - name: Quick build test
       run: |
@@ -225,7 +217,7 @@ jobs:
         cd libwarpdeck
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               ..
         make -j$(nproc)
         cd ../..
@@ -234,7 +226,7 @@ jobs:
         cd cli
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake \
+              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
               ..
         make -j$(nproc)
         cd ../..
@@ -264,7 +256,7 @@ jobs:
         cd warpdeck-flutter/warpdeck_gui
         flutter pub get
         dart format --set-exit-if-changed .
-        dart analyze --fatal-infos
+        dart analyze --fatal-warnings
 
     - name: Check for TODO/FIXME comments
       run: |

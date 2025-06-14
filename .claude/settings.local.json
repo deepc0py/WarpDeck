@@ -29,7 +29,21 @@
       "Bash(chmod:*)",
       "Bash(gh pr create:*)",
       "Bash(./build_scripts/build_macos.sh:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(true)",
+      "Bash(cp:*)",
+      "Bash(nm:*)",
+      "Bash(dart:*)",
+      "Bash(install_name_tool:*)",
+      "Bash(/Users/jesse/code/WarpDeck/warpdeck-flutter/warpdeck_gui/fix_macos_dependencies.sh)",
+      "Bash(./fix_macos_dependencies.sh:*)",
+      "Bash(log show:*)",
+      "Bash(rg:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue comment:*)",
+      "Bash(gh issue close:*)",
+      "Bash(gh pr checks:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

@@ -236,7 +236,7 @@ class UpdateDialog extends ConsumerWidget {
       case UpdateStatus.available:
         return MdiIcons.download;
       case UpdateStatus.readyToInstall:
-        return MdiIcons.installMobile;
+        return MdiIcons.download;
       case UpdateStatus.error:
         return MdiIcons.openInNew;
       default:

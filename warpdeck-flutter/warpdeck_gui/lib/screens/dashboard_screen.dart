@@ -84,7 +84,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         style: Theme.of(context).textTheme.headlineLarge,
                       ),
                       const SizedBox(width: 16),
-                      StatusIndicator(status: warpDeckState.status),
+                      StatusIndicator(
+                        status: warpDeckState.status,
+                        errorMessage: warpDeckState.errorMessage,
+                      ),
                       const Spacer(),
                       if (warpDeckState.deviceName != null) ...[
                         Icon(MdiIcons.laptop, size: 20),
