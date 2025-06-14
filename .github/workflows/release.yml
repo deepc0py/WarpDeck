@@ -24,11 +24,22 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Flutter
+    - name: Cache Homebrew packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/local/Cellar
+          /usr/local/var/homebrew
+        key: ${{ runner.os }}-brew-${{ hashFiles('.github/workflows/**') }}
+        restore-keys: |
+          ${{ runner.os }}-brew-
+
+    - name: Setup Flutter with cache
       uses: subosito/flutter-action@v2
       with:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
+        cache: true
 
     - name: Install dependencies
       run: |
@@ -39,6 +50,16 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+        
+    - name: Cache vcpkg packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/local/share/vcpkg/installed
+          ${{ env.VCPKG_ROOT }}/packages
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install C++ dependencies
       run: |
@@ -93,8 +114,14 @@ jobs:
         # Create DMG
         hdiutil create -volname "WarpDeck" -srcfolder dmg_temp -ov -format UDZO WarpDeck-macOS.dmg
         
-        # Move DMG to root for upload
+        # Move DMG to root for upload  
+        echo "📍 Current directory: $(pwd)"
+        echo "📁 Files before move: $(ls -la WarpDeck-macOS.dmg)"
         mv WarpDeck-macOS.dmg ../../../../../..
+        echo "✅ DMG moved to root"
+        cd ../../../../../..
+        echo "📍 Root directory: $(pwd)"
+        echo "📁 DMG at root: $(ls -la WarpDeck-macOS.dmg)"
 
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
@@ -112,32 +139,33 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          pkg-config \
-          libssl-dev \
-          libavahi-client-dev \
-          libgtk-3-dev \
-          ninja-build \
-          clang \
-          libayatana-appindicator3-dev \
-          librsvg2-bin \
-          imagemagick
+    - name: Cache APT packages
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: cmake build-essential pkg-config libssl-dev libavahi-client-dev libgtk-3-dev ninja-build clang libayatana-appindicator3-dev librsvg2-bin imagemagick
+        version: 1.0
 
-    - name: Setup Flutter
+    - name: Setup Flutter with cache
       uses: subosito/flutter-action@v2
       with:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
+        cache: true
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+        
+    - name: Cache vcpkg packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/share/vcpkg/installed
+          ${{ env.VCPKG_ROOT }}/packages
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install C++ dependencies
       run: |
@@ -266,7 +294,13 @@ jobs:
         "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
         
         # Move AppImage to root for upload
+        echo "📍 Current directory: $(pwd)"
+        echo "📁 Files before move: $(ls -la WarpDeck.AppImage)"
         mv WarpDeck.AppImage ../../../../../..
+        echo "✅ AppImage moved to root"
+        cd ../../../../../..
+        echo "📍 Root directory: $(pwd)"  
+        echo "📁 AppImage at root: $(ls -la WarpDeck.AppImage)"
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
