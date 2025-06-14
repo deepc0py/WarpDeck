@@ -23,6 +23,8 @@ WarpDeck brings secure, lightning-fast peer-to-peer file sharing directly betwee
 
 ### Download
 
+> 📦 **Fresh builds are automatically created** from every commit to the main branch via GitHub Actions CI/CD.
+
 | Platform | Download | Size | Format |
 |----------|----------|------|--------|
 | **macOS** | [Download DMG](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck-macOS.dmg) | ~25 MB | Universal Binary |
