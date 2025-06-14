@@ -239,64 +239,31 @@ jobs:
         Categories=Network;FileTransfer;
         EOF
         
-        # Copy and prepare icons for AppImage
-        echo "🔍 Searching for icon files..."
-        find . -name "*warpdeck*" -type f | head -10
-        find . -name "*icon*" -type f | grep -E "\.(png|svg)$" | head -10
+        # Copy icon - just use the one that's obviously there
+        echo "🔍 Current directory contents:"
+        ls -la
+        echo "📁 Looking for warpdeck.png..."
+        find . -name "warpdeck.png" -type f
         
-        ICON_COPIED=false
-        
-        # Check multiple possible icon paths based on the search results
-        ICON_PATHS=(
-          "usr/bin/data/flutter_assets/assets/icons/warpdeck.png"
-          "data/flutter_assets/assets/icons/warpdeck.png"
-          "WarpDeck.AppDir/usr/bin/data/flutter_assets/assets/icons/warpdeck.png"
-        )
-        
-        SVG_PATHS=(
-          "usr/bin/data/flutter_assets/assets/icons/warpdeck.svg"
-          "data/flutter_assets/assets/icons/warpdeck.svg"
-          "WarpDeck.AppDir/usr/bin/data/flutter_assets/assets/icons/warpdeck.svg"
-        )
-        
-        # Try PNG first (direct copy)
-        for png_path in "${ICON_PATHS[@]}"; do
-          if [ -f "$png_path" ]; then
-            echo "✅ Found PNG icon at: $png_path"
-            cp "$png_path" WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
-            cp "$png_path" WarpDeck.AppDir/warpdeck.png
-            ICON_COPIED=true
-            break
-          fi
-        done
-        
-        # Try SVG conversion if PNG not found
-        if [ "$ICON_COPIED" = "false" ]; then
-          for svg_path in "${SVG_PATHS[@]}"; do
-            if [ -f "$svg_path" ]; then
-              echo "✅ Found SVG icon at: $svg_path"
-              rsvg-convert -w 256 -h 256 -o WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png "$svg_path"
-              cp WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png WarpDeck.AppDir/warpdeck.png
-              ICON_COPIED=true
-              break
-            fi
-          done
-        fi
-        
-        # Create placeholder if no icon found
-        if [ "$ICON_COPIED" = "false" ]; then
-          echo "❌ No suitable icon found! Creating placeholder with ImageMagick..."
-          # Create a simple colored square as placeholder using ImageMagick
-          magick -size 256x256 xc:'#2196F3' WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
+        # Just copy the damn icon that we can see exists
+        if [ -f "data/flutter_assets/assets/icons/warpdeck.png" ]; then
+          echo "✅ Found PNG icon, copying it"
+          cp data/flutter_assets/assets/icons/warpdeck.png WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
+          cp data/flutter_assets/assets/icons/warpdeck.png WarpDeck.AppDir/warpdeck.png
+        elif [ -f "usr/bin/data/flutter_assets/assets/icons/warpdeck.png" ]; then
+          echo "✅ Found PNG icon in usr/bin path"
+          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.png WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
+          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.png WarpDeck.AppDir/warpdeck.png
+        else
+          echo "❌ Just create a simple PNG placeholder"
+          # Screw ImageMagick, just create a simple file
+          echo "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANCSURBVHic7doxAQAAAMKg9U9tDQ+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEALwIA" | base64 -d > WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
           cp WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png WarpDeck.AppDir/warpdeck.png
-          ICON_COPIED=true
         fi
         
-        if [ "$ICON_COPIED" = "true" ]; then
-          echo "✅ Icon successfully placed at:"
-          ls -la WarpDeck.AppDir/warpdeck.png
-          ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
-        fi
+        echo "✅ Icon should be placed at:"
+        ls -la WarpDeck.AppDir/warpdeck.png
+        ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
         
         # Create AppRun
         cat > WarpDeck.AppDir/AppRun << EOF
