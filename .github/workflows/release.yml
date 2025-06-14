@@ -114,14 +114,18 @@ jobs:
         # Create DMG
         hdiutil create -volname "WarpDeck" -srcfolder dmg_temp -ov -format UDZO WarpDeck-macOS.dmg
         
-        # Move DMG to root for upload  
+        # Move DMG to workspace root for upload  
         echo "📍 Current directory: $(pwd)"
         echo "📁 Files before move: $(ls -la WarpDeck-macOS.dmg)"
-        mv WarpDeck-macOS.dmg ../../../../../..
-        echo "✅ DMG moved to root"
-        cd ../../../../../..
-        echo "📍 Root directory: $(pwd)"
-        echo "📁 DMG at root: $(ls -la WarpDeck-macOS.dmg)"
+        
+        # Calculate path to workspace root from current location
+        # We're in: warpdeck-flutter/warpdeck_gui/build/macos/Build/Products/Release
+        # We need to go up 7 levels to get to workspace root
+        mv WarpDeck-macOS.dmg ../../../../../../..
+        echo "✅ DMG moved to workspace root"
+        cd ../../../../../../..
+        echo "📍 Workspace root directory: $(pwd)"
+        echo "📁 DMG at workspace root: $(ls -la WarpDeck-macOS.dmg)"
 
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
@@ -293,14 +297,18 @@ jobs:
         fi
         "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
         
-        # Move AppImage to root for upload
+        # Move AppImage to workspace root for upload
         echo "📍 Current directory: $(pwd)"
         echo "📁 Files before move: $(ls -la WarpDeck.AppImage)"
-        mv WarpDeck.AppImage ../../../../../..
-        echo "✅ AppImage moved to root"
-        cd ../../../../../..
-        echo "📍 Root directory: $(pwd)"  
-        echo "📁 AppImage at root: $(ls -la WarpDeck.AppImage)"
+        
+        # Calculate path to workspace root from current location
+        # We're in: warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
+        # We need to go up 7 levels to get to workspace root
+        mv WarpDeck.AppImage ../../../../../../..
+        echo "✅ AppImage moved to workspace root"
+        cd ../../../../../../..
+        echo "📍 Workspace root directory: $(pwd)"  
+        echo "📁 AppImage at workspace root: $(ls -la WarpDeck.AppImage)"
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v4
