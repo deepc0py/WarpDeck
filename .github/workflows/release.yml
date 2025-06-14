@@ -1,0 +1,68 @@
+- name: Create AppImage
+      run: |
+        # Download and prepare AppImage tool
+        wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool-x86_64.AppImage
+        ./appimagetool-x86_64.AppImage --appimage-extract
+        APPIMAGE_TOOL="$(pwd)/squashfs-root/AppRun"
+        
+        # Navigate to the built application bundle
+        cd warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
+        
+        # Create the AppDir structure
+        mkdir -p WarpDeck.AppDir/usr/bin
+        mkdir -p WarpDeck.AppDir/usr/share/applications
+        mkdir -p WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
+        
+        # Copy application files into the AppDir
+        for item in *; do
+          if [ "$item" != "WarpDeck.AppDir" ]; then
+            cp -r "$item" WarpDeck.AppDir/usr/bin/
+          fi
+        done
+        
+        # Create the .desktop file
+        cat > WarpDeck.AppDir/usr/share/applications/warpdeck.desktop << EOF
+        [Desktop Entry]
+        Type=Application
+        Name=WarpDeck
+        Comment=Secure peer-to-peer file sharing
+        Exec=warpdeck_gui
+        Icon=warpdeck
+        Categories=Network;FileTransfer;
+        EOF
+        cp WarpDeck.AppDir/usr/share/applications/warpdeck.desktop WarpDeck.AppDir/
+        
+        # --- ICON CONVERSION AND PLACEMENT ---
+        SOURCE_SVG="usr/bin/data/flutter_assets/assets/icons/warpdeck.svg"
+        DEST_PNG="WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png"
+        
+        echo "Looking for source icon at: $(pwd)/$SOURCE_SVG"
+        if [ -f "$SOURCE_SVG" ]; then
+          echo "✅ Source icon found. Converting to PNG..."
+          rsvg-convert -w 256 -h 256 -o "$DEST_PNG" "$SOURCE_SVG"
+          # Also copy the icon to the root of the AppDir
+          cp "$DEST_PNG" WarpDeck.AppDir/warpdeck.png
+          echo "Icon converted and placed in AppDir."
+        else
+          echo "⚠️ WARNING: Source SVG icon not found at $SOURCE_SVG. AppImage icon will be missing."
+        fi
+        
+        # --- DEBUGGING ---
+        echo "--- Verifying file locations ---"
+        echo "Listing root of AppDir:"
+        ls -l WarpDeck.AppDir
+        echo "Listing icon directory:"
+        ls -l WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
+        echo "--- Verification complete ---"
+        
+        # Create AppRun executable
+        cat > WarpDeck.AppDir/AppRun << EOF
+        #!/bin/bash
+        HERE="\$(dirname "\$(readlink -f "\${0}")")"
+        exec "\${HERE}/usr/bin/warpdeck_gui" "\$@"
+        EOF
+        chmod +x WarpDeck.AppDir/AppRun
+        
+        # Build the final AppImage
+        "$APPIMAGE_TOOL" WarpDeck.AppDir ../../../../../../WarpDeck.AppImage

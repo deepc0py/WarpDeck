@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <sstream>
 #include <algorithm>
+#include <cstdint>
 
 bool InteractiveUI::prompt_transfer_acceptance(const std::string& peer_name, 
                                               const std::vector<FileInfo>& files) {

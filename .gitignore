@@ -1,0 +1,61 @@
+# Build directories
+build/
+*/build/
+**/build/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# C++ compiled files
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# Flutter build output
+**/build/
+
+# Dart/Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+pubspec.lock
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# macOS
+.DS_Store
+xcuserdata/
+
+# vcpkg
+vcpkg/
+**/vcpkg/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Logs
+*.log
+
+# Test output
+test_output/
+
+# Local configuration
+.env
+.env.local
+
+# Claude settings
+.claude/

@@ -1,6 +1,7 @@
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
+import 'package:path/path.dart' as path;
 
 // Typedefs for libwarpdeck C API
 typedef WarpDeckHandle = Opaque;
@@ -68,21 +69,57 @@ class WarpDeckFFI {
 
   void _loadLibrary() {
     // Load the libwarpdeck library
-    if (Platform.isMacOS) {
-      _lib = DynamicLibrary.open('../../../libwarpdeck/build/libwarpdeck.a');
-    } else if (Platform.isLinux) {
-      _lib = DynamicLibrary.open('../../../libwarpdeck/build/libwarpdeck.a');
-    } else {
-      throw UnsupportedError('Platform not supported');
+    try {
+      if (Platform.isMacOS) {
+        // Try multiple paths for the dylib
+        final executableDir = path.dirname(Platform.resolvedExecutable);
+        final possiblePaths = [
+          // Bundled with app in same directory as executable
+          path.join(executableDir, 'libwarpdeck.dylib'),
+          // Development path from Flutter project
+          '../../../libwarpdeck/build/libwarpdeck.dylib',
+          // Bundled with app (relative)
+          'libwarpdeck.dylib',
+          // Absolute development path
+          '/Users/jesse/code/WarpDeck/libwarpdeck/build/libwarpdeck.dylib',
+        ];
+        
+        DynamicLibrary? lib;
+        
+        for (final path in possiblePaths) {
+          try {
+            lib = DynamicLibrary.open(path);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+        
+        if (lib == null) {
+          throw Exception('Could not load libwarpdeck.dylib from any of the attempted paths: ${possiblePaths.join(', ')}');
+        }
+        
+        _lib = lib;
+      } else if (Platform.isLinux) {
+        _lib = DynamicLibrary.open('../../../libwarpdeck/build/libwarpdeck.so');
+      } else {
+        throw UnsupportedError('Platform not supported');
+      }
+    } catch (e) {
+      rethrow;
     }
   }
 
   void _bindFunctions() {
-    warpdeckCreate = _lib.lookupFunction<WarpDeckCreateNative, WarpDeckCreateDart>('warpdeck_create');
-    warpdeckStart = _lib.lookupFunction<WarpDeckStartNative, WarpDeckStartDart>('warpdeck_start');
-    warpdeckStop = _lib.lookupFunction<WarpDeckStopNative, WarpDeckStopDart>('warpdeck_stop');
-    warpdeckDestroy = _lib.lookupFunction<WarpDeckDestroyNative, WarpDeckDestroyDart>('warpdeck_destroy');
-    warpdeckInitiateTransfer = _lib.lookupFunction<WarpDeckInitiateTransferNative, WarpDeckInitiateTransferDart>('warpdeck_initiate_transfer');
-    warpdeckRespondToTransfer = _lib.lookupFunction<WarpDeckRespondToTransferNative, WarpDeckRespondToTransferDart>('warpdeck_respond_to_transfer');
+    try {
+      warpdeckCreate = _lib.lookupFunction<WarpDeckCreateNative, WarpDeckCreateDart>('warpdeck_create');
+      warpdeckStart = _lib.lookupFunction<WarpDeckStartNative, WarpDeckStartDart>('warpdeck_start');
+      warpdeckStop = _lib.lookupFunction<WarpDeckStopNative, WarpDeckStopDart>('warpdeck_stop');
+      warpdeckDestroy = _lib.lookupFunction<WarpDeckDestroyNative, WarpDeckDestroyDart>('warpdeck_destroy');
+      warpdeckInitiateTransfer = _lib.lookupFunction<WarpDeckInitiateTransferNative, WarpDeckInitiateTransferDart>('warpdeck_initiate_transfer');
+      warpdeckRespondToTransfer = _lib.lookupFunction<WarpDeckRespondToTransferNative, WarpDeckRespondToTransferDart>('warpdeck_respond_to_transfer');
+    } catch (e) {
+      rethrow;
+    }
   }
 }

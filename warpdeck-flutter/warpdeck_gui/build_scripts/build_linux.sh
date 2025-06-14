@@ -59,15 +59,42 @@ EOF
 # Copy desktop file to standard location
 cp "$APPDIR/warpdeck.desktop" "$APPDIR/usr/share/applications/"
 
-# Create simple icon (placeholder)
-cat > "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg" << 'EOF'
-<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-  <rect width="256" height="256" fill="#2196F3"/>
-  <text x="128" y="140" text-anchor="middle" fill="white" font-size="48" font-family="sans-serif">WD</text>
-</svg>
-EOF
+# === START ICON FIX ===
 
-cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/warpdeck.svg" "$APPDIR/warpdeck.svg"
+# Define icon paths
+SOURCE_ICON_SVG="assets/icons/warpdeck.svg"
+ICON_NAME="warpdeck"
+TARGET_ICON_DIR="$APPDIR/usr/share/icons/hicolor/256x256/apps"
+TARGET_ICON_PNG="$TARGET_ICON_DIR/${ICON_NAME}.png"
+
+echo "🖼️ Converting SVG to PNG for AppImage compatibility..."
+
+# Check if source icon exists before converting
+echo "   -> Checking for source SVG: $SOURCE_ICON_SVG"
+ls -l "$SOURCE_ICON_SVG"
+
+# Convert SVG to PNG using rsvg-convert
+rsvg-convert -w 256 -h 256 -o "$TARGET_ICON_PNG" "$SOURCE_ICON_SVG"
+
+# The .desktop file uses 'Icon=warpdeck', so 'warpdeck.png' must exist
+# in the standard icon path within the AppDir.
+echo "   -> Copied PNG to: $TARGET_ICON_PNG"
+
+# It's also good practice to place the icon, named after the app, at the root of the AppDir.
+# The AppImage tool often uses this for the AppImage's own icon.
+cp "$TARGET_ICON_PNG" "$APPDIR/${ICON_NAME}.png"
+echo "   -> Copied PNG to root of AppDir: $APPDIR/${ICON_NAME}.png"
+
+# --- DEBUGGING: List the contents of the key directories ---
+echo "--- Verifying file locations ---"
+echo "Listing root of AppDir:"
+ls -l "$APPDIR"
+echo "Listing icon directory:"
+ls -l "$TARGET_ICON_DIR"
+echo "--- Verification complete ---"
+
+# === END ICON FIX ===
+
 
 # Create AppRun script
 cat > "$APPDIR/AppRun" << 'EOF'

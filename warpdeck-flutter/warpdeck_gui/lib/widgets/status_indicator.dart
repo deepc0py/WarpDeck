@@ -5,15 +5,17 @@ import '../services/warpdeck_service.dart';
 
 class StatusIndicator extends StatelessWidget {
   final WarpDeckStatus status;
+  final String? errorMessage;
 
   const StatusIndicator({
     super.key,
     required this.status,
+    this.errorMessage,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final statusWidget = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: _getStatusColor().withOpacity(0.1),
@@ -41,6 +43,47 @@ class StatusIndicator extends StatelessWidget {
               color: _getStatusColor(),
               fontWeight: FontWeight.w500,
             ),
+          ),
+          if (status == WarpDeckStatus.error && errorMessage != null) ...[
+            const SizedBox(width: 4),
+            Icon(
+              MdiIcons.informationOutline,
+              size: 16,
+              color: _getStatusColor(),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    // If there's an error with a message, make it clickable
+    if (status == WarpDeckStatus.error && errorMessage != null) {
+      return InkWell(
+        onTap: () => _showErrorDialog(context),
+        borderRadius: BorderRadius.circular(16),
+        child: statusWidget,
+      );
+    }
+
+    return statusWidget;
+  }
+
+  void _showErrorDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(MdiIcons.alertCircle, color: Colors.red),
+            const SizedBox(width: 8),
+            const Text('Error'),
+          ],
+        ),
+        content: Text(errorMessage ?? 'An unknown error occurred'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
           ),
         ],
       ),

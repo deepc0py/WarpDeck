@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +45,18 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
       
       _deviceName = deviceName ?? await _getStoredDeviceName() ?? _getDefaultDeviceName();
       
+      // Try to initialize the FFI library first to catch loading errors
+      try {
+        // This will trigger library loading and function binding
+        final _ = WarpDeckFFI.instance;
+      } catch (e) {
+        state = state.copyWith(
+          status: WarpDeckStatus.error,
+          errorMessage: 'Failed to load WarpDeck library: $e',
+        );
+        return false;
+      }
+      
       // Setup callbacks
       _callbacks = calloc<Callbacks>();
       _callbacks!.ref.onPeerDiscovered = Pointer.fromFunction<OnPeerDiscoveredNative>(_onPeerDiscovered);
@@ -63,7 +74,7 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
       if (_handle == nullptr) {
         state = state.copyWith(
           status: WarpDeckStatus.error,
-          errorMessage: 'Failed to create WarpDeck instance',
+          errorMessage: 'Failed to create WarpDeck instance - libwarpdeck returned null handle',
         );
         return false;
       }
@@ -71,6 +82,7 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
       state = state.copyWith(
         status: WarpDeckStatus.initialized,
         deviceName: _deviceName,
+        errorMessage: null, // Clear any previous errors
       );
       
       return true;
@@ -132,6 +144,7 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
     }
   }
 
+  @override
   Future<void> dispose() async {
     await stop();
     
@@ -139,6 +152,8 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
       WarpDeckFFI.instance.warpdeckDestroy(_handle!);
       _handle = nullptr;
     }
+    
+    super.dispose();
     
     if (_callbacks != nullptr) {
       calloc.free(_callbacks!);
@@ -239,64 +254,28 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
 
   // Static callback functions
   static void _onPeerDiscovered(Pointer<Utf8> peerJsonPtr) {
-    try {
-      final peerJson = peerJsonPtr.toDartString();
-      final peerData = jsonDecode(peerJson) as Map<String, dynamic>;
-      final peer = Peer.fromJson(peerData);
-      
-      // Update state through the instance
-      // Note: In a real implementation, you'd need a reference to the service instance
-      // For now, this is a simplified callback structure
-    } catch (e) {
-      print('Error parsing peer data: $e');
-    }
+    // Ultra-simple implementation to test if the callback itself is the issue
+    print('_onPeerDiscovered called - callback is working!');
   }
 
   static void _onPeerLost(Pointer<Utf8> deviceIdPtr) {
-    try {
-      final deviceId = deviceIdPtr.toDartString();
-      // Remove peer from state
-    } catch (e) {
-      print('Error handling peer lost: $e');
-    }
+    print('_onPeerLost called');
   }
 
   static void _onIncomingTransferRequest(Pointer<Utf8> transferRequestJsonPtr) {
-    try {
-      final requestJson = transferRequestJsonPtr.toDartString();
-      final requestData = jsonDecode(requestJson) as Map<String, dynamic>;
-      // Handle incoming transfer request
-    } catch (e) {
-      print('Error handling transfer request: $e');
-    }
+    print('_onIncomingTransferRequest called');
   }
 
   static void _onTransferProgressUpdate(Pointer<Utf8> transferIdPtr, double progress, int bytesTransferred) {
-    try {
-      final transferId = transferIdPtr.toDartString();
-      // Update transfer progress
-    } catch (e) {
-      print('Error updating transfer progress: $e');
-    }
+    print('_onTransferProgressUpdate called');
   }
 
   static void _onTransferCompleted(Pointer<Utf8> transferIdPtr, bool success, Pointer<Utf8> errorMessagePtr) {
-    try {
-      final transferId = transferIdPtr.toDartString();
-      final errorMessage = errorMessagePtr != nullptr ? errorMessagePtr.toDartString() : null;
-      // Handle transfer completion
-    } catch (e) {
-      print('Error handling transfer completion: $e');
-    }
+    print('_onTransferCompleted called');
   }
 
   static void _onError(Pointer<Utf8> errorMessagePtr) {
-    try {
-      final errorMessage = errorMessagePtr.toDartString();
-      print('WarpDeck error: $errorMessage');
-    } catch (e) {
-      print('Error handling error callback: $e');
-    }
+    print('_onError called');
   }
 
   // Helper methods

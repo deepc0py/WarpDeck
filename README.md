@@ -3,9 +3,10 @@
 **Secure, fast, and beautiful peer-to-peer file sharing for macOS, Linux, and Steam Deck.**
 
 [![GitHub Release](https://img.shields.io/github/v/release/deepc0py/WarpDeck?color=blue)](https://github.com/deepc0py/WarpDeck/releases/latest)
+[![Build Status](https://github.com/deepc0py/WarpDeck/workflows/Build%20and%20Test/badge.svg)](https://github.com/deepc0py/WarpDeck/actions/workflows/build.yml)
+[![Release Status](https://github.com/deepc0py/WarpDeck/workflows/Build%20and%20Release/badge.svg)](https://github.com/deepc0py/WarpDeck/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform Support](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Steam%20Deck-lightgrey)](https://github.com/deepc0py/WarpDeck)
-[![Performance](https://img.shields.io/badge/Performance-100%25-brightgreen)](https://github.com/deepc0py/WarpDeck)
 
 WarpDeck brings secure, lightning-fast peer-to-peer file sharing directly between your devices. No cloud required, no tracking, just direct device-to-device transfers with beautiful native applications.
 
@@ -24,9 +25,9 @@ WarpDeck brings secure, lightning-fast peer-to-peer file sharing directly betwee
 
 | Platform | Download | Size | Format |
 |----------|----------|------|--------|
-| **macOS** | [Download DMG](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck-macOS.dmg) | 25 MB | Universal Binary |
-| **Linux** | [Download AppImage](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck.AppImage) | 45 MB | Portable |
-| **Steam Deck** | [Download AppImage](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck.AppImage) | 45 MB | Optimized |
+| **macOS** | [Download DMG](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck-macOS.dmg) | ~25 MB | Universal Binary |
+| **Linux** | [Download AppImage](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck.AppImage) | ~45 MB | Portable |
+| **Steam Deck** | [Download AppImage](https://github.com/deepc0py/WarpDeck/releases/latest/download/WarpDeck.AppImage) | ~45 MB | Optimized |
 
 ### Installation
 
@@ -101,21 +102,28 @@ Beautiful desktop interface featuring:
 
 ### Building from Source
 
+#### Quick Setup
 ```bash
 # Clone the repository
 git clone https://github.com/deepc0py/WarpDeck.git
 cd WarpDeck
 
+# Run the setup script (installs dependencies)
+./setup-dev.sh
+```
+
+#### Manual Build
+```bash
 # Build libwarpdeck
 cd libwarpdeck
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake ..
 make -j$(nproc)
 
 # Build CLI
 cd ../../cli
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake ..
 make -j$(nproc)
 
 # Build GUI
@@ -124,6 +132,17 @@ flutter pub get
 dart run build_runner build
 flutter build macos --release  # or linux
 ```
+
+#### Automated Builds
+
+WarpDeck uses GitHub Actions for continuous integration and delivery:
+
+- **🔄 Continuous Integration**: Every pull request and commit is automatically built and tested
+- **📦 Automatic Releases**: New releases are automatically created from the main branch
+- **✅ Quality Checks**: Code formatting, analysis, and testing are enforced
+- **🚀 Fresh Downloads**: README download links always point to the latest builds
+
+The CI/CD pipeline builds for both macOS and Linux, running comprehensive tests and creating distributable packages automatically.
 
 ### Project Structure
 ```
@@ -169,14 +188,16 @@ WarpDeck prioritizes security and privacy:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for detailed information.
 
-### Development Setup
+### Quick Start for Contributors
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test on target platforms
+2. Run `./setup-dev.sh` to set up your environment
+3. Create a feature branch
+4. Make your changes and test them
 5. Submit a pull request
+
+All pull requests are automatically built and tested by our CI/CD pipeline.
 
 ### Areas for Contribution
 - 🐛 Bug fixes and testing

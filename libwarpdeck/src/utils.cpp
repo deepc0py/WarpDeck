@@ -63,7 +63,7 @@ std::string peer_info_to_json(const PeerInfo& peer) {
     j["platform"] = peer.platform;
     j["port"] = peer.port;
     j["fingerprint"] = peer.fingerprint;
-    j["host_address"] = peer.host_address;
+    j["hostAddress"] = peer.host_address;  // Use camelCase to match Dart model
     return j.dump();
 }
 

@@ -193,6 +193,10 @@ private:
                                uint16_t txtLen,
                                const unsigned char* txtRecord,
                                void* context) {
+        if (!context) {
+            std::cerr << "Null context in resolve_callback" << std::endl;
+            return;
+        }
         auto* impl = static_cast<DiscoveryManagerMacOSImpl*>(context);
         
         if (errorCode != kDNSServiceErr_NoError) {
@@ -219,12 +223,34 @@ private:
             }
         }
         
+        // Validate required fields before creating PeerInfo
+        const std::vector<std::string> required_fields = {"id", "name", "platform", "port", "fp"};
+        for (const std::string& field : required_fields) {
+            if (txt_data.find(field) == txt_data.end() || txt_data[field].empty()) {
+                std::cerr << "Missing required field in TXT record: " << field << std::endl;
+                return; // Skip this peer
+            }
+        }
+        
+        // Parse port with error handling
+        int parsed_port = 0;
+        try {
+            parsed_port = std::stoi(txt_data["port"]);
+            if (parsed_port <= 0 || parsed_port > 65535) {
+                std::cerr << "Invalid port number: " << parsed_port << std::endl;
+                return; // Skip this peer
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to parse port: " << txt_data["port"] << " - " << e.what() << std::endl;
+            return; // Skip this peer
+        }
+        
         // Create PeerInfo
         PeerInfo peer;
         peer.id = txt_data["id"];
         peer.name = txt_data["name"];
         peer.platform = txt_data["platform"];
-        peer.port = std::stoi(txt_data["port"]);
+        peer.port = parsed_port;
         peer.fingerprint = txt_data["fp"];
         peer.host_address = hosttarget;
         

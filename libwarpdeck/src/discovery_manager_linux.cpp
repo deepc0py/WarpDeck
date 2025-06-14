@@ -12,14 +12,15 @@
 #include <string>
 #include <thread>
 #include <iostream>
+#include <memory>
 
 namespace warpdeck {
 
-class DiscoveryManager::Impl {
+class DiscoveryManagerLinux : public DiscoveryManager::Impl {
 public:
-    Impl(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr) {}
+    DiscoveryManagerLinux(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr) {}
     
-    ~Impl() {
+    ~DiscoveryManagerLinux() {
         stop_discovery();
     }
     
@@ -52,7 +53,7 @@ public:
         // Register service and start browsing will happen in client callback
         
         // Start processing thread
-        processing_thread_ = std::thread(&Impl::process_events, this);
+        processing_thread_ = std::thread(&DiscoveryManagerLinux::process_events, this);
         
         return true;
     }
@@ -94,7 +95,7 @@ public:
 
 private:
     static void client_callback(AvahiClient* client, AvahiClientState state, void* userdata) {
-        auto* impl = static_cast<Impl*>(userdata);
+        auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         switch (state) {
             case AVAHI_CLIENT_S_RUNNING:
@@ -213,7 +214,7 @@ private:
                               const char* domain,
                               AvahiLookupResultFlags flags,
                               void* userdata) {
-        auto* impl = static_cast<Impl*>(userdata);
+        auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         switch (event) {
             case AVAHI_BROWSER_NEW:
@@ -262,7 +263,7 @@ private:
                                AvahiStringList* txt,
                                AvahiLookupResultFlags flags,
                                void* userdata) {
-        auto* impl = static_cast<Impl*>(userdata);
+        auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         if (event == AVAHI_RESOLVER_FOUND) {
             // Parse TXT record
@@ -324,6 +325,10 @@ private:
     int port_;
     std::string fingerprint_;
 };
+
+void DiscoveryManager::create_platform_impl() {
+    impl_ = std::make_unique<DiscoveryManagerLinux>(this);
+}
 
 } // namespace warpdeck
 
