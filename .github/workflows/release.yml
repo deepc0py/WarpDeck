@@ -269,13 +269,15 @@ copy_lib_deps() {
 # Ensure target directory exists
 mkdir -p WarpDeck.AppDir/usr/lib
 
-# Bundle core system tray libraries with fallback paths
+# Bundle core system tray libraries with extensive fallback paths
 declare -a TRAY_LIBS=(
     "/usr/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1"
     "/usr/lib/x86_64-linux-gnu/libayatana-indicator3.so.7"
     "/usr/lib/x86_64-linux-gnu/libayatana-ido3-0.4.so.0"
     "/usr/lib/libayatana-appindicator3.so.1"
     "/usr/lib/libayatana-indicator3.so.7"
+    "/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1"
+    "/lib/x86_64-linux-gnu/libayatana-indicator3.so.7"
 )
 
 declare -a DBUS_LIBS=(
@@ -297,17 +299,29 @@ for lib_pattern in "${TRAY_LIBS[@]}" "${DBUS_LIBS[@]}"; do
     done
 done
 
+# Comprehensive verification and debugging
+echo "🔍 System library search results:"
+find /usr/lib* /lib* -name "*ayatana*" 2>/dev/null | head -20 || echo "  No ayatana libraries found on system"
+
 # Verify we got the critical library
 if [[ ! -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]]; then
-    echo "⚠️  WARNING: libayatana-appindicator3.so.1 not found - system tray may not work on Steam Deck"
+    echo "⚠️  WARNING: libayatana-appindicator3.so.1 not found in bundle"
     echo "🔍 Available ayatana libraries on system:"
-    find /usr/lib* -name "*ayatana*" 2>/dev/null | head -10 || echo "  None found"
+    find /usr/lib* /lib* -name "*ayatana*" 2>/dev/null | head -10 || echo "  None found"
+    echo "🔍 Available in different locations:"
+    dpkg -L libayatana-appindicator3-1 2>/dev/null | grep "\.so" || echo "  Package not installed or different name"
 else
     echo "✅ Successfully bundled libayatana-appindicator3.so.1"
 fi
 
 echo "📋 Final bundled libraries:"
 ls -la WarpDeck.AppDir/usr/lib/ | grep -E "(ayatana|dbusmenu)" || echo "  No system tray libraries found"
+
+# Verify library dependencies
+echo "🔗 Checking bundled library dependencies:"
+if [[ -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]]; then
+    ldd WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1 | head -5
+fi
         EOF
 
         chmod +x bundle_libs.sh
@@ -360,13 +374,28 @@ ls -la WarpDeck.AppDir/usr/lib/ | grep -E "(ayatana|dbusmenu)" || echo "  No sys
         ls -la WarpDeck.AppDir/warpdeck.png
         ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
         
-        # Create AppRun
+        # Create AppRun with enhanced library loading
         cat > WarpDeck.AppDir/AppRun << EOF
         #!/bin/bash
         HERE="\$(dirname "\$(readlink -f "\${0}")")"
         
-        # Add bundled libraries to LD_LIBRARY_PATH for Steam Deck compatibility
+        # Debug information for library loading issues
+        if [ "\$WARPDECK_DEBUG" = "1" ]; then
+            echo "🔍 WarpDeck AppImage Debug Info:"
+            echo "   AppImage location: \$HERE"
+            echo "   Library directory: \${HERE}/usr/lib"
+            echo "   Available libraries:"
+            ls -la "\${HERE}/usr/lib" | grep -E "(ayatana|dbusmenu)" || echo "     No system tray libraries found"
+            echo "   Current LD_LIBRARY_PATH: \$LD_LIBRARY_PATH"
+        fi
+        
+        # Add bundled libraries to LD_LIBRARY_PATH for Steam Deck/Arch compatibility
         export LD_LIBRARY_PATH="\${HERE}/usr/lib:\${LD_LIBRARY_PATH}"
+        
+        # Ensure library directory is accessible
+        if [ ! -d "\${HERE}/usr/lib" ]; then
+            echo "⚠️  Warning: Library directory not found in AppImage"
+        fi
         
         # Run the application
         exec "\${HERE}/usr/bin/warpdeck_gui" "\$@"
