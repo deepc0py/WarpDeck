@@ -218,6 +218,7 @@ jobs:
         
         # Create AppDir structure
         mkdir -p WarpDeck.AppDir/usr/bin
+        mkdir -p WarpDeck.AppDir/usr/lib
         mkdir -p WarpDeck.AppDir/usr/share/applications
         mkdir -p WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps
         
@@ -227,6 +228,23 @@ jobs:
             cp -r "$item" WarpDeck.AppDir/usr/bin/
           fi
         done
+        
+        # Copy system tray dependencies that Steam Deck might not have
+        echo "📦 Bundling system tray dependencies..."
+        
+        # Find and copy libayatana-appindicator3 and its dependencies
+        if [ -f "/usr/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1" ]; then
+          cp /usr/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1* WarpDeck.AppDir/usr/lib/ || true
+        fi
+        
+        # Copy other ayatana dependencies
+        cp /usr/lib/x86_64-linux-gnu/libayatana-indicator3.so.7* WarpDeck.AppDir/usr/lib/ 2>/dev/null || true
+        cp /usr/lib/x86_64-linux-gnu/libayatana-ido3-0.4.so.0* WarpDeck.AppDir/usr/lib/ 2>/dev/null || true
+        cp /usr/lib/x86_64-linux-gnu/libdbusmenu-glib.so.4* WarpDeck.AppDir/usr/lib/ 2>/dev/null || true
+        cp /usr/lib/x86_64-linux-gnu/libdbusmenu-gtk3.so.4* WarpDeck.AppDir/usr/lib/ 2>/dev/null || true
+        
+        echo "📋 Bundled libraries:"
+        ls -la WarpDeck.AppDir/usr/lib/
         
         # Create desktop file
         cat > WarpDeck.AppDir/usr/share/applications/warpdeck.desktop << EOF
@@ -269,6 +287,11 @@ jobs:
         cat > WarpDeck.AppDir/AppRun << EOF
         #!/bin/bash
         HERE="\$(dirname "\$(readlink -f "\${0}")")"
+        
+        # Add bundled libraries to LD_LIBRARY_PATH for Steam Deck compatibility
+        export LD_LIBRARY_PATH="\${HERE}/usr/lib:\${LD_LIBRARY_PATH}"
+        
+        # Run the application
         exec "\${HERE}/usr/bin/warpdeck_gui" "\$@"
         EOF
         chmod +x WarpDeck.AppDir/AppRun
