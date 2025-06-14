@@ -241,7 +241,7 @@ jobs:
         
         # Create robust library bundling script
         cat > bundle_libs.sh << 'EOF'
-        #!/bin/bash
+#!/bin/bash
 set -e
 
 # Function to copy library and its dependencies recursively
