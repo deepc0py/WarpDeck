@@ -96,7 +96,7 @@ jobs:
 
     - name: Build CLI
       run: |
-        cd cli
+        cd warpdeck-cli
         rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
@@ -106,7 +106,7 @@ jobs:
 
     - name: Test CLI basic functionality
       run: |
-        cd cli/build
+        cd warpdeck-cli/build
         # Test help command
         ./warpdeck --help || echo "Help command test completed"
         
@@ -229,7 +229,7 @@ jobs:
         cd ../..
         
         # Build CLI
-        cd cli
+        cd warpdeck-cli
         rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \

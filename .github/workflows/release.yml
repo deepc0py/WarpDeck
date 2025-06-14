@@ -54,7 +54,7 @@ jobs:
 
     - name: Build CLI
       run: |
-        cd cli
+        cd warpdeck-cli
         rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
@@ -99,7 +99,7 @@ jobs:
         name: warpdeck-macos
         path: |
           WarpDeck-macOS.dmg
-          cli/build/warpdeck
+          warpdeck-cli/build/warpdeck
 
   build-linux:
     name: Build Linux
@@ -150,7 +150,7 @@ jobs:
 
     - name: Build CLI
       run: |
-        cd cli
+        cd warpdeck-cli
         rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
@@ -226,7 +226,7 @@ jobs:
         name: warpdeck-linux
         path: |
           WarpDeck.AppImage
-          cli/build/warpdeck
+          warpdeck-cli/build/warpdeck
 
   release:
     name: Create Release

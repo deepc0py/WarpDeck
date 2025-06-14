@@ -12,14 +12,15 @@
 #include <string>
 #include <thread>
 #include <iostream>
+#include <memory>
 
 namespace warpdeck {
 
-class DiscoveryManager::Impl {
+class DiscoveryManagerLinux : public DiscoveryManager::Impl {
 public:
-    Impl(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr) {}
+    DiscoveryManagerLinux(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr) {}
     
-    ~Impl() {
+    ~DiscoveryManagerLinux() {
         stop_discovery();
     }
     
@@ -324,6 +325,10 @@ private:
     int port_;
     std::string fingerprint_;
 };
+
+void DiscoveryManager::create_platform_impl() {
+    impl_ = std::make_unique<DiscoveryManagerLinux>(this);
+}
 
 } // namespace warpdeck
 
