@@ -173,8 +173,9 @@ jobs:
         wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool-x86_64.AppImage
         
-        # Store the absolute path to the AppImage tool
-        APPIMAGE_TOOL="$(pwd)/appimagetool-x86_64.AppImage"
+        # Extract the AppImage tool since FUSE is not available in CI
+        ./appimagetool-x86_64.AppImage --appimage-extract
+        APPIMAGE_TOOL="$(pwd)/squashfs-root/AppRun"
         
         cd warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
         
