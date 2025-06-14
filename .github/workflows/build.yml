@@ -41,6 +41,8 @@ jobs:
     - name: Build and test libwarpdeck
       run: |
         cd libwarpdeck
+        rm -rf build
+        rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Debug \
               -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
@@ -84,6 +86,7 @@ jobs:
     - name: Build libwarpdeck
       run: |
         cd libwarpdeck
+        rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
@@ -94,6 +97,7 @@ jobs:
     - name: Build CLI
       run: |
         cd cli
+        rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
@@ -148,6 +152,7 @@ jobs:
     - name: Build libwarpdeck
       run: |
         cd libwarpdeck
+        rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
@@ -215,6 +220,7 @@ jobs:
       run: |
         # Build libwarpdeck
         cd libwarpdeck
+        rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
@@ -224,6 +230,7 @@ jobs:
         
         # Build CLI
         cd cli
+        rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \

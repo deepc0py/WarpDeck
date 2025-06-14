@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/Users/jesse/code/WarpDeck/libwarpdeck/build/cmake_install.cmake",
-		"/Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/httplib-build/cmake_install.cmake",
-		"/Users/jesse/code/WarpDeck/libwarpdeck/build/_deps/nlohmann_json-build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
