@@ -44,7 +44,9 @@
       "Bash(gh issue close:*)",
       "Bash(gh pr checks:*)",
       "WebFetch(domain:github.com)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": []
   }

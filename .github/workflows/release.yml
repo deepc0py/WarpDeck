@@ -8,6 +8,9 @@ on:
   release:
     types: [ published ]
 
+permissions:
+  contents: write
+
 env:
   FLUTTER_VERSION: '3.22.2'
   CMAKE_VERSION: '3.15'
@@ -295,6 +298,12 @@ jobs:
         name: warpdeck-linux
         path: ./artifacts/linux
 
+    - name: Prepare CLI assets with correct names
+      run: |
+        # Copy CLI binaries with correct names for release
+        cp ./artifacts/macos/warpdeck ./artifacts/macos/warpdeck-cli-macos
+        cp ./artifacts/linux/warpdeck ./artifacts/linux/warpdeck-cli-linux
+
     - name: Generate release tag
       id: tag
       run: |
@@ -305,12 +314,10 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.tag.outputs.tag }}
-        release_name: WarpDeck ${{ steps.tag.outputs.tag }}
+        name: WarpDeck ${{ steps.tag.outputs.tag }}
         body: |
           ## WarpDeck Release ${{ steps.tag.outputs.tag }}
           
@@ -351,46 +358,11 @@ jobs:
           ```
         draft: false
         prerelease: false
-
-    - name: Upload macOS DMG
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/macos/WarpDeck-macOS.dmg
-        asset_name: WarpDeck-macOS.dmg
-        asset_content_type: application/x-apple-diskimage
-
-    - name: Upload Linux AppImage
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/linux/WarpDeck.AppImage
-        asset_name: WarpDeck.AppImage
-        asset_content_type: application/x-executable
-
-    - name: Upload macOS CLI
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/macos/warpdeck
-        asset_name: warpdeck-cli-macos
-        asset_content_type: application/x-executable
-
-    - name: Upload Linux CLI
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./artifacts/linux/warpdeck
-        asset_name: warpdeck-cli-linux
-        asset_content_type: application/x-executable
+        files: |
+          ./artifacts/macos/WarpDeck-macOS.dmg
+          ./artifacts/linux/WarpDeck.AppImage
+          ./artifacts/macos/warpdeck-cli-macos
+          ./artifacts/linux/warpdeck-cli-linux
 
     - name: Update latest release
       run: |
