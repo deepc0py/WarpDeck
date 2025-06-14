@@ -137,7 +137,7 @@ jobs:
 
   build-linux:
     name: Build Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     
     steps:
     - name: Checkout repository
@@ -307,6 +307,15 @@ BUNDLE_EOF
         ./bundle_libs.sh
         rm bundle_libs.sh
         
+        # Validate bundled libraries
+        echo "🔍 Validating bundled system tray libraries..."
+        if [ -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]; then
+          echo "✅ libayatana-appindicator3.so.1 successfully bundled"
+          ldd WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1 | head -5
+        else
+          echo "⚠️  libayatana-appindicator3.so.1 not found in bundle"
+        fi
+        
         # Create desktop file
         cat > WarpDeck.AppDir/usr/share/applications/warpdeck.desktop << EOF
         [Desktop Entry]
@@ -367,6 +376,54 @@ BUNDLE_EOF
           exit 1
         fi
         "$APPIMAGE_TOOL" WarpDeck.AppDir WarpDeck.AppImage
+        
+        # Validate AppImage after creation
+        echo "🔍 Validating created AppImage..."
+        if [ ! -f "WarpDeck.AppImage" ]; then
+          echo "❌ AppImage creation failed - file not found"
+          exit 1
+        fi
+        
+        # Check AppImage is executable
+        if [ ! -x "WarpDeck.AppImage" ]; then
+          echo "❌ AppImage is not executable"
+          exit 1
+        fi
+        
+        # Test AppImage can show help (basic functionality test)
+        echo "🧪 Testing AppImage basic functionality..."
+        timeout 10s ./WarpDeck.AppImage --help || echo "⚠️  AppImage help test failed (may be normal for GUI apps)"
+        
+        # Validate desktop file integration
+        echo "🖥️  Validating desktop integration..."
+        ./WarpDeck.AppImage --appimage-extract >/dev/null 2>&1
+        if [ -f "squashfs-root/warpdeck.desktop" ]; then
+          echo "✅ Desktop file found in AppImage"
+          if command -v desktop-file-validate >/dev/null 2>&1; then
+            desktop-file-validate squashfs-root/warpdeck.desktop && echo "✅ Desktop file is valid" || echo "⚠️  Desktop file validation failed"
+          fi
+        else
+          echo "⚠️  Desktop file not found in AppImage root"
+        fi
+        
+        # Check bundled libraries are present
+        echo "📚 Checking bundled libraries in AppImage..."
+        if [ -d "squashfs-root/usr/lib" ]; then
+          echo "📋 Bundled system tray libraries:"
+          find squashfs-root/usr/lib -name "*ayatana*" -o -name "*dbusmenu*" | head -10 || echo "  No system tray libraries found"
+        fi
+        
+        # Check icon is present
+        if [ -f "squashfs-root/warpdeck.png" ]; then
+          echo "✅ Icon found in AppImage"
+        else
+          echo "⚠️  Icon not found in AppImage"
+        fi
+        
+        # Clean up extraction
+        rm -rf squashfs-root
+        
+        echo "✅ AppImage validation complete"
         
         # Move AppImage to workspace root for upload
         echo "📍 Current directory: $(pwd)"

@@ -12,7 +12,7 @@ env:
 jobs:
   test-libwarpdeck:
     name: Test libwarpdeck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     
     steps:
     - name: Checkout repository
@@ -57,7 +57,7 @@ jobs:
 
   test-cli:
     name: Test CLI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     needs: test-libwarpdeck
     
     steps:
@@ -115,7 +115,7 @@ jobs:
 
   test-flutter:
     name: Test Flutter GUI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     
     steps:
     - name: Checkout repository
@@ -182,7 +182,7 @@ jobs:
 
   build-quick:
     name: Quick Build Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     if: github.event_name == 'pull_request'
     
     steps:
@@ -248,7 +248,7 @@ jobs:
 
   lint:
     name: Code Quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04  # Use older LTS for maximum compatibility
     
     steps:
     - name: Checkout repository
