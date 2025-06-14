@@ -74,7 +74,8 @@ elif [[ "$OS" == "Linux" ]]; then
             libavahi-client-dev \
             libgtk-3-dev \
             ninja-build \
-            clang
+            clang \
+            libayatana-appindicator3-dev
     elif command -v dnf &> /dev/null; then
         echo "📦 Installing dnf dependencies..."
         sudo dnf install -y \
@@ -85,7 +86,8 @@ elif [[ "$OS" == "Linux" ]]; then
             avahi-devel \
             gtk3-devel \
             ninja-build \
-            clang
+            clang \
+            libayatana-appindicator3-devel
     elif command -v pacman &> /dev/null; then
         echo "📦 Installing pacman dependencies..."
         sudo pacman -S --needed \
@@ -96,10 +98,11 @@ elif [[ "$OS" == "Linux" ]]; then
             avahi \
             gtk3 \
             ninja \
-            clang
+            clang \
+            libayatana-appindicator
     else
         echo "❌ Unsupported package manager. Please install dependencies manually:"
-        echo "   cmake, build-essential, pkg-config, libssl-dev, libavahi-client-dev, libgtk-3-dev, ninja-build, clang"
+        echo "   cmake, build-essential, pkg-config, libssl-dev, libavahi-client-dev, libgtk-3-dev, ninja-build, clang, libayatana-appindicator3-dev"
         exit 1
     fi
 fi
