@@ -1,41 +1,22 @@
-<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#E3F2FD;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  
-  <!-- Background circle -->
-  <circle cx="128" cy="128" r="120" fill="url(#bgGradient)" stroke="#1565C0" stroke-width="4"/>
-  
-  <!-- Warp effect rings -->
-  <circle cx="128" cy="128" r="90" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-  <circle cx="128" cy="128" r="70" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-  <circle cx="128" cy="128" r="50" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-  
-  <!-- Central transfer icon -->
-  <g transform="translate(128, 128)">
-    <!-- Bidirectional arrows -->
-    <path d="M-30 -10 L-10 -10 L-10 -20 L10 0 L-10 20 L-10 10 L-30 10 Z" 
-          fill="url(#iconGradient)" opacity="0.9"/>
-    <path d="M30 10 L10 10 L10 20 L-10 0 L10 -20 L10 -10 L30 -10 Z" 
-          fill="url(#iconGradient)" opacity="0.9"/>
-    
-    <!-- Device icons -->
-    <rect x="-45" y="-8" width="12" height="16" rx="2" fill="url(#iconGradient)" opacity="0.8"/>
-    <rect x="33" y="-8" width="12" height="16" rx="2" fill="url(#iconGradient)" opacity="0.8"/>
-    
-    <!-- Connection particles -->
-    <circle cx="-20" cy="-5" r="2" fill="rgba(255,255,255,0.8)"/>
-    <circle cx="0" cy="8" r="1.5" fill="rgba(255,255,255,0.6)"/>
-    <circle cx="20" cy="-3" r="2" fill="rgba(255,255,255,0.8)"/>
-  </g>
-  
-  <!-- Subtle outer glow -->
-  <circle cx="128" cy="128" r="124" fill="none" stroke="rgba(33,150,243,0.3)" stroke-width="8" opacity="0.5"/>
-</svg>
+<svg class="icon-svg" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#50E3C2;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="grad2" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#7B1FA2;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#F5515F;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <path d="M64 48 C28.65 48 0 76.65 0 112 L0 144 C0 179.35 28.65 208 64 208 L80 208 L80 48 Z" fill="url(#grad1)"/>
+                <path d="M192 48 C227.35 48 256 76.65 256 112 L256 144 C256 179.35 227.35 208 192 208 L176 208 L176 48 Z" fill="url(#grad2)"/>
+
+                <!-- Animated Arrows -->
+                <path d="M100 100 L140 128 L100 156" stroke="#FFFFFF" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <animate attributeName="d" values="M100 100 L140 128 L100 156; M110 100 L150 128 L110 156; M100 100 L140 128 L100 156" dur="1.5s" repeatCount="indefinite" />
+                </path>
+                 <path d="M156 100 L116 128 L156 156" stroke="#FFFFFF" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <animate attributeName="d" values="M156 100 L116 128 L156 156; M146 100 L106 128 L146 156; M156 100 L116 128 L156 156" dur="1.5s" repeatCount="indefinite" />
+                </path>
+            </svg>

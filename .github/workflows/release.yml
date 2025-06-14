@@ -202,9 +202,14 @@ jobs:
         Categories=Network;FileTransfer;
         EOF
         
-        # Copy icon (assuming we have one in assets)
-        if [ -f "usr/bin/data/flutter_assets/assets/icons/app_icon.png" ]; then
+        # Copy icon from Flutter assets
+        if [ -f "usr/bin/data/flutter_assets/assets/icons/warpdeck.svg" ]; then
+          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.svg WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.svg
+          # Also copy to root for AppImage
+          cp usr/bin/data/flutter_assets/assets/icons/warpdeck.svg WarpDeck.AppDir/warpdeck.svg
+        elif [ -f "usr/bin/data/flutter_assets/assets/icons/app_icon.png" ]; then
           cp usr/bin/data/flutter_assets/assets/icons/app_icon.png WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
+          cp usr/bin/data/flutter_assets/assets/icons/app_icon.png WarpDeck.AppDir/warpdeck.png
         fi
         
         # Create AppRun
@@ -218,10 +223,6 @@ jobs:
         # Copy desktop file to root
         cp WarpDeck.AppDir/usr/share/applications/warpdeck.desktop WarpDeck.AppDir/
         
-        # Copy icon to root
-        if [ -f "WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png" ]; then
-          cp WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png WarpDeck.AppDir/
-        fi
         
         # Build AppImage
         if [ ! -f "$APPIMAGE_TOOL" ]; then
