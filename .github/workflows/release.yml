@@ -236,97 +236,22 @@ jobs:
           fi
         done
         
-        # Copy system tray dependencies with robust recursive bundling
+        # Copy system tray dependencies for Steam Deck compatibility
         echo "📦 Bundling system tray dependencies for Steam Deck compatibility..."
         
-        # Create robust library bundling script
-        cat > bundle_libs.sh << 'EOF'
-#!/bin/bash
-set -e
-
-# Function to copy library and its dependencies recursively
-copy_lib_deps() {
-    local lib_path="$1"
-    local target_dir="$2"
-    local lib_name=$(basename "$lib_path")
-    
-    # Skip if already copied
-    if [[ -f "$lib_path" && ! -f "$target_dir/$lib_name" ]]; then
-        echo "  -> Bundling $lib_name"
-        cp "$lib_path" "$target_dir/"
+        # Bundle core system tray libraries directly
+        mkdir -p WarpDeck.AppDir/usr/lib
         
-        # Find and copy ayatana/dbusmenu dependencies recursively
-        if command -v ldd >/dev/null 2>&1; then
-            ldd "$lib_path" 2>/dev/null | grep -E "(libayatana|libdbusmenu|libindicator)" | awk '{print $3}' | while read dep; do
-                if [[ -f "$dep" && ! -f "$target_dir/$(basename "$dep")" ]]; then
-                    copy_lib_deps "$dep" "$target_dir"
-                fi
-            done
-        fi
-    fi
-}
-
-# Ensure target directory exists
-mkdir -p WarpDeck.AppDir/usr/lib
-
-# Bundle core system tray libraries with extensive fallback paths
-declare -a TRAY_LIBS=(
-    "/usr/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1"
-    "/usr/lib/x86_64-linux-gnu/libayatana-indicator3.so.7"
-    "/usr/lib/x86_64-linux-gnu/libayatana-ido3-0.4.so.0"
-    "/usr/lib/libayatana-appindicator3.so.1"
-    "/usr/lib/libayatana-indicator3.so.7"
-    "/lib/x86_64-linux-gnu/libayatana-appindicator3.so.1"
-    "/lib/x86_64-linux-gnu/libayatana-indicator3.so.7"
-)
-
-declare -a DBUS_LIBS=(
-    "/usr/lib/x86_64-linux-gnu/libdbusmenu-glib.so.4"
-    "/usr/lib/x86_64-linux-gnu/libdbusmenu-gtk3.so.4"
-    "/usr/lib/libdbusmenu-glib.so.4"
-    "/usr/lib/libdbusmenu-gtk3.so.4"
-)
-
-# Copy system tray libraries
-echo "🔍 Searching for system tray libraries..."
-for lib_pattern in "${TRAY_LIBS[@]}" "${DBUS_LIBS[@]}"; do
-    # Handle both exact paths and glob patterns
-    for lib_file in $lib_pattern*; do
-        if [[ -f "$lib_file" ]]; then
-            copy_lib_deps "$lib_file" "WarpDeck.AppDir/usr/lib"
-            break  # Found one, move to next pattern
-        fi
-    done
-done
-
-# Comprehensive verification and debugging
-echo "🔍 System library search results:"
-find /usr/lib* /lib* -name "*ayatana*" 2>/dev/null | head -20 || echo "  No ayatana libraries found on system"
-
-# Verify we got the critical library
-if [[ ! -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]]; then
-    echo "⚠️  WARNING: libayatana-appindicator3.so.1 not found in bundle"
-    echo "🔍 Available ayatana libraries on system:"
-    find /usr/lib* /lib* -name "*ayatana*" 2>/dev/null | head -10 || echo "  None found"
-    echo "🔍 Available in different locations:"
-    dpkg -L libayatana-appindicator3-1 2>/dev/null | grep "\.so" || echo "  Package not installed or different name"
-else
-    echo "✅ Successfully bundled libayatana-appindicator3.so.1"
-fi
-
-echo "📋 Final bundled libraries:"
-ls -la WarpDeck.AppDir/usr/lib/ | grep -E "(ayatana|dbusmenu)" || echo "  No system tray libraries found"
-
-# Verify library dependencies
-echo "🔗 Checking bundled library dependencies:"
-if [[ -f "WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1" ]]; then
-    ldd WarpDeck.AppDir/usr/lib/libayatana-appindicator3.so.1 | head -5
-fi
-        EOF
-
-        chmod +x bundle_libs.sh
-        ./bundle_libs.sh
-        rm bundle_libs.sh
+        # Copy ayatana libraries if available
+        for lib in libayatana-appindicator3.so.1 libayatana-indicator3.so.7 libdbusmenu-glib.so.4 libdbusmenu-gtk3.so.4; do
+          for path in /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu; do
+            if [ -f "$path/$lib" ]; then
+              echo "  -> Bundling $lib from $path"
+              cp "$path/$lib" WarpDeck.AppDir/usr/lib/
+              break
+            fi
+          done
+        done
         
         # Validate bundled libraries
         echo "🔍 Validating bundled system tray libraries..."
@@ -374,32 +299,13 @@ fi
         ls -la WarpDeck.AppDir/warpdeck.png
         ls -la WarpDeck.AppDir/usr/share/icons/hicolor/256x256/apps/warpdeck.png
         
-        # Create AppRun with enhanced library loading
-        cat > WarpDeck.AppDir/AppRun << 'EOF'
+        # Create simple AppRun script
+        cat > WarpDeck.AppDir/AppRun << 'APPRUN_SCRIPT'
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "${0}")")"
-
-# Debug information for library loading issues
-if [ "$WARPDECK_DEBUG" = "1" ]; then
-    echo "🔍 WarpDeck AppImage Debug Info:"
-    echo "   AppImage location: $HERE"
-    echo "   Library directory: ${HERE}/usr/lib"
-    echo "   Available libraries:"
-    ls -la "${HERE}/usr/lib" | grep -E "(ayatana|dbusmenu)" || echo "     No system tray libraries found"
-    echo "   Current LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-fi
-
-# Add bundled libraries to LD_LIBRARY_PATH for Steam Deck/Arch compatibility
 export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
-
-# Ensure library directory is accessible
-if [ ! -d "${HERE}/usr/lib" ]; then
-    echo "⚠️  Warning: Library directory not found in AppImage"
-fi
-
-# Run the application
 exec "${HERE}/usr/bin/warpdeck_gui" "$@"
-EOF
+APPRUN_SCRIPT
         chmod +x WarpDeck.AppDir/AppRun
         
         # Copy desktop file to root
