@@ -236,7 +236,7 @@ jobs:
         find ../../../../../../../ -name "*libwarpdeck*" -type f 2>/dev/null | head -10
         
         # Find the built library (mirroring macOS approach)
-        BUILD_DIR="../../../../../../libwarpdeck/build"
+        BUILD_DIR="../../../../../../../libwarpdeck/build"
         echo "🔍 Contents of libwarpdeck build directory:"
         ls -la "$BUILD_DIR" 2>/dev/null || echo "  libwarpdeck/build directory not found"
         
