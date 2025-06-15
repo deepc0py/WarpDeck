@@ -215,6 +215,25 @@ jobs:
       run: |
         cd warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
         echo "📦 Copying libwarpdeck.so to Flutter bundle..."
+        echo "📍 Current directory: $(pwd)"
+        
+        # Debug: Check workspace structure
+        echo "🔍 Debugging workspace structure:"
+        echo "1 level up:" && ls -la ../
+        echo "2 levels up:" && ls -la ../../ 
+        echo "3 levels up:" && ls -la ../../../
+        echo "4 levels up:" && ls -la ../../../../
+        echo "5 levels up:" && ls -la ../../../../../
+        echo "6 levels up:" && ls -la ../../../../../../
+        echo "7 levels up:" && ls -la ../../../../../../../
+        
+        # Find libwarpdeck directory
+        echo "🔍 Looking for libwarpdeck directory..."
+        find ../../../../../../../ -name "libwarpdeck" -type d 2>/dev/null | head -5
+        
+        # Find any libwarpdeck files
+        echo "🔍 Looking for ANY libwarpdeck files..."
+        find ../../../../../../../ -name "*libwarpdeck*" -type f 2>/dev/null | head -10
         
         # Find the built library (mirroring macOS approach)
         BUILD_DIR="../../../../../../libwarpdeck/build"
