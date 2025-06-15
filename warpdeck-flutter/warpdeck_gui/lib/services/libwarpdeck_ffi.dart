@@ -105,11 +105,9 @@ class WarpDeckFFI {
         final executableDir = path.dirname(Platform.resolvedExecutable);
         final possiblePaths = [
           // Bundled with AppImage in same directory as executable
-          path.join(executableDir, 'libwarpdeck.so'),
-          // AppImage-specific paths (executable might be in different location)
+          '$executableDir/libwarpdeck.so',
+          // AppImage-specific paths - use simple concatenation to avoid path.join bugs
           './libwarpdeck.so',
-          path.join(path.dirname(path.dirname(Platform.resolvedExecutable)), 'usr', 'bin', 'libwarpdeck.so'),
-          path.join(path.dirname(Platform.resolvedExecutable), '..', 'libwarpdeck.so'),
           // Development path from Flutter project
           '../../../libwarpdeck/build/libwarpdeck.so',
           // Bundled with app (relative)

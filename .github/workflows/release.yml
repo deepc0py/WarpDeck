@@ -211,6 +211,42 @@ jobs:
         dart run build_runner build --delete-conflicting-outputs
         flutter build linux --release
 
+    - name: Fix Linux dependencies
+      run: |
+        cd warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
+        echo "📦 Copying libwarpdeck.so to Flutter bundle..."
+        
+        # Find the built library (mirroring macOS approach)
+        BUILD_DIR="../../../../../libwarpdeck/build"
+        echo "🔍 Contents of libwarpdeck build directory:"
+        ls -la "$BUILD_DIR" 2>/dev/null || echo "  libwarpdeck/build directory not found"
+        
+        POSSIBLE_LIBS=(
+          "$BUILD_DIR/libwarpdeck.so"
+          "$BUILD_DIR/libwarpdeck_shared.so"
+        )
+        
+        FOUND_LIB=""
+        for lib_path in "${POSSIBLE_LIBS[@]}"; do
+          if [ -f "$lib_path" ]; then
+            FOUND_LIB="$lib_path"
+            echo "  ✅ Found library at: $lib_path"
+            break
+          else
+            echo "  ❌ Not found: $lib_path"
+          fi
+        done
+        
+        if [ -n "$FOUND_LIB" ]; then
+          echo "  ✅ Copying $(basename "$FOUND_LIB") to Flutter bundle"
+          cp "$FOUND_LIB" ./libwarpdeck.so
+          echo "  ✅ Library copied successfully"
+          ls -la ./libwarpdeck.so
+        else
+          echo "  ❌ ERROR: No libwarpdeck library found!"
+          exit 1
+        fi
+
     - name: Create AppImage
       run: |
         # Download AppImage tools
@@ -236,47 +272,17 @@ jobs:
           fi
         done
         
-        # Copy libwarpdeck.so to AppImage
-        echo "📦 Bundling libwarpdeck.so..."
-        echo "📍 Current directory: $(pwd)"
-        echo "🔍 Looking for libwarpdeck.so..."
-        
-        # We're in: warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
-        # We need to go up 7 levels to get to workspace root, then into libwarpdeck/build
-        BUILD_DIR="../../../../../../libwarpdeck/build"
-        
-        echo "🔍 Contents of libwarpdeck build directory:"
-        ls -la "$BUILD_DIR" 2>/dev/null || echo "  libwarpdeck/build directory not found"
-        
-        # Try multiple possible library names (mirroring macOS approach)
-        POSSIBLE_LIBS=(
-          "$BUILD_DIR/libwarpdeck.so"        # Might exist with simple name
-          "$BUILD_DIR/libwarpdeck_shared.so" # Explicit shared library
-          "$BUILD_DIR/libwarpdeck.dylib"     # Just in case
-        )
-        
-        FOUND_LIB=""
-        for lib_path in "${POSSIBLE_LIBS[@]}"; do
-          if [ -f "$lib_path" ]; then
-            FOUND_LIB="$lib_path"
-            echo "  ✅ Found library at: $lib_path"
-            break
-          else
-            echo "  ❌ Not found: $lib_path"
-          fi
-        done
-        
-        if [ -n "$FOUND_LIB" ]; then
-          echo "  ✅ Copying $(basename "$FOUND_LIB") to AppImage as libwarpdeck.so"
-          cp "$FOUND_LIB" WarpDeck.AppDir/usr/bin/libwarpdeck.so
-          echo "  ✅ Copied to $(pwd)/WarpDeck.AppDir/usr/bin/libwarpdeck.so"
-          echo "  🔍 Verifying library was copied:"
-          ls -la WarpDeck.AppDir/usr/bin/libwarpdeck.so
-          file WarpDeck.AppDir/usr/bin/libwarpdeck.so
+        # Copy libwarpdeck.so from Flutter bundle to AppImage (already copied in previous step)
+        echo "📦 Bundling libwarpdeck.so into AppImage..."
+        if [ -f "libwarpdeck.so" ]; then
+          echo "  ✅ Found libwarpdeck.so in Flutter bundle, copying to AppImage"
+          cp libwarpdeck.so WarpDeck.AppDir/usr/bin/libwarpdeck.so
+          echo "  ✅ Library bundled into AppImage"
         else
-          echo "  ❌ No libwarpdeck library found!"
-          echo "🔍 Searching for ANY libwarpdeck files in workspace..."
-          find ../../../../../../ -name "*libwarpdeck*" -type f 2>/dev/null | head -10 || echo "  No libwarpdeck files found anywhere"
+          echo "  ❌ ERROR: libwarpdeck.so missing from Flutter bundle!"
+          echo "🔍 Contents of current directory:"
+          ls -la
+          exit 1
         fi
         
         # Copy system tray dependencies for Steam Deck compatibility
