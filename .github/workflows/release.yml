@@ -238,12 +238,23 @@ jobs:
         
         # Copy libwarpdeck.so to AppImage
         echo "📦 Bundling libwarpdeck.so..."
-        if [ -f "../../../../../../libwarpdeck/build/libwarpdeck.so" ]; then
-          echo "  ✅ Found libwarpdeck.so, copying to AppImage"
-          cp "../../../../../../libwarpdeck/build/libwarpdeck.so" WarpDeck.AppDir/usr/bin/
+        echo "📍 Current directory: $(pwd)"
+        echo "🔍 Looking for libwarpdeck.so..."
+        
+        # We're in: warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
+        # We need to go up 7 levels to get to workspace root, then into libwarpdeck/build
+        LIBWARPDECK_PATH="../../../../../../libwarpdeck/build/libwarpdeck_shared.so"
+        
+        if [ -f "$LIBWARPDECK_PATH" ]; then
+          echo "  ✅ Found libwarpdeck_shared.so, copying to AppImage as libwarpdeck.so"
+          cp "$LIBWARPDECK_PATH" WarpDeck.AppDir/usr/bin/libwarpdeck.so
+          echo "  ✅ Copied libwarpdeck_shared.so to $(pwd)/WarpDeck.AppDir/usr/bin/libwarpdeck.so"
         else
-          echo "  ❌ libwarpdeck.so not found at expected path"
-          find ../../../../../../ -name "libwarpdeck.so" 2>/dev/null | head -5 || echo "  No libwarpdeck.so found anywhere"
+          echo "  ❌ libwarpdeck_shared.so not found at $LIBWARPDECK_PATH"
+          echo "🔍 Searching for libwarpdeck*.so in workspace..."
+          find ../../../../../../ -name "libwarpdeck*.so" -type f 2>/dev/null | head -5 || echo "  No libwarpdeck*.so found anywhere"
+          echo "🔍 Contents of libwarpdeck build dir:"
+          ls -la ../../../../../../libwarpdeck/build/ 2>/dev/null || echo "  libwarpdeck/build directory not found"
         fi
         
         # Copy system tray dependencies for Steam Deck compatibility
