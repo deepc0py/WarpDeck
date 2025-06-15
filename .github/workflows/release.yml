@@ -243,18 +243,40 @@ jobs:
         
         # We're in: warpdeck-flutter/warpdeck_gui/build/linux/x64/release/bundle
         # We need to go up 7 levels to get to workspace root, then into libwarpdeck/build
-        LIBWARPDECK_PATH="../../../../../../libwarpdeck/build/libwarpdeck_shared.so"
+        BUILD_DIR="../../../../../../libwarpdeck/build"
         
-        if [ -f "$LIBWARPDECK_PATH" ]; then
-          echo "  ✅ Found libwarpdeck_shared.so, copying to AppImage as libwarpdeck.so"
-          cp "$LIBWARPDECK_PATH" WarpDeck.AppDir/usr/bin/libwarpdeck.so
-          echo "  ✅ Copied libwarpdeck_shared.so to $(pwd)/WarpDeck.AppDir/usr/bin/libwarpdeck.so"
+        echo "🔍 Contents of libwarpdeck build directory:"
+        ls -la "$BUILD_DIR" 2>/dev/null || echo "  libwarpdeck/build directory not found"
+        
+        # Try multiple possible library names (mirroring macOS approach)
+        POSSIBLE_LIBS=(
+          "$BUILD_DIR/libwarpdeck.so"        # Might exist with simple name
+          "$BUILD_DIR/libwarpdeck_shared.so" # Explicit shared library
+          "$BUILD_DIR/libwarpdeck.dylib"     # Just in case
+        )
+        
+        FOUND_LIB=""
+        for lib_path in "${POSSIBLE_LIBS[@]}"; do
+          if [ -f "$lib_path" ]; then
+            FOUND_LIB="$lib_path"
+            echo "  ✅ Found library at: $lib_path"
+            break
+          else
+            echo "  ❌ Not found: $lib_path"
+          fi
+        done
+        
+        if [ -n "$FOUND_LIB" ]; then
+          echo "  ✅ Copying $(basename "$FOUND_LIB") to AppImage as libwarpdeck.so"
+          cp "$FOUND_LIB" WarpDeck.AppDir/usr/bin/libwarpdeck.so
+          echo "  ✅ Copied to $(pwd)/WarpDeck.AppDir/usr/bin/libwarpdeck.so"
+          echo "  🔍 Verifying library was copied:"
+          ls -la WarpDeck.AppDir/usr/bin/libwarpdeck.so
+          file WarpDeck.AppDir/usr/bin/libwarpdeck.so
         else
-          echo "  ❌ libwarpdeck_shared.so not found at $LIBWARPDECK_PATH"
-          echo "🔍 Searching for libwarpdeck*.so in workspace..."
-          find ../../../../../../ -name "libwarpdeck*.so" -type f 2>/dev/null | head -5 || echo "  No libwarpdeck*.so found anywhere"
-          echo "🔍 Contents of libwarpdeck build dir:"
-          ls -la ../../../../../../libwarpdeck/build/ 2>/dev/null || echo "  libwarpdeck/build directory not found"
+          echo "  ❌ No libwarpdeck library found!"
+          echo "🔍 Searching for ANY libwarpdeck files in workspace..."
+          find ../../../../../../ -name "*libwarpdeck*" -type f 2>/dev/null | head -10 || echo "  No libwarpdeck files found anywhere"
         fi
         
         # Copy system tray dependencies for Steam Deck compatibility
@@ -342,6 +364,21 @@ jobs:
         echo 'export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"' >> WarpDeck.AppDir/AppRun
         echo 'exec "${HERE}/usr/bin/warpdeck_gui" "$@"' >> WarpDeck.AppDir/AppRun
         chmod +x WarpDeck.AppDir/AppRun
+        
+        # 🔍 FINAL VERIFICATION: Check that libwarpdeck.so is in the AppImage
+        echo "🔍 FINAL VERIFICATION: Checking AppImage contents before building..."
+        echo "📁 Contents of WarpDeck.AppDir/usr/bin/:"
+        ls -la WarpDeck.AppDir/usr/bin/ | head -15
+        if [ -f "WarpDeck.AppDir/usr/bin/libwarpdeck.so" ]; then
+          echo "✅ libwarpdeck.so IS present in AppImage!"
+          echo "📊 Library file details:"
+          ls -la WarpDeck.AppDir/usr/bin/libwarpdeck.so
+          file WarpDeck.AppDir/usr/bin/libwarpdeck.so
+        else
+          echo "❌ libwarpdeck.so is MISSING from AppImage!"
+          echo "🔍 Searching entire AppDir for any libwarpdeck files:"
+          find WarpDeck.AppDir -name "*libwarpdeck*" -type f 2>/dev/null || echo "  No libwarpdeck files found in AppDir"
+        fi
         
         # Copy desktop file to root
         cp WarpDeck.AppDir/usr/share/applications/warpdeck.desktop WarpDeck.AppDir/
