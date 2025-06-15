@@ -27,6 +27,7 @@ endif()
 find_package(PkgConfig REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
+find_package(CURL REQUIRED)
 
 # Platform detection
 if(APPLE)
@@ -86,6 +87,7 @@ target_link_libraries(warpdeck PRIVATE
     Threads::Threads
     httplib::httplib
     nlohmann_json::nlohmann_json
+    CURL::libcurl
     ${PLATFORM_LIBRARIES}
 )
 

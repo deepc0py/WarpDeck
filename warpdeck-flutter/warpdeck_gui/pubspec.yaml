@@ -55,6 +55,9 @@ dependencies:
   window_manager: ^0.3.9
   system_tray: ^2.0.3
   launch_at_startup: ^0.2.2
+  
+  # Network connectivity
+  connectivity_plus: ^6.0.5
 
 dev_dependencies:
   flutter_test:

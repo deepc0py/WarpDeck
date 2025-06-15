@@ -9,6 +9,7 @@ enum class Command {
     LIST,
     SEND,
     CONFIG,
+    DEBUG,
     UNKNOWN
 };
 
