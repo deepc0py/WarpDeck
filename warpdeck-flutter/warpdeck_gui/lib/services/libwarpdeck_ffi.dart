@@ -106,6 +106,10 @@ class WarpDeckFFI {
         final possiblePaths = [
           // Bundled with AppImage in same directory as executable
           path.join(executableDir, 'libwarpdeck.so'),
+          // AppImage-specific paths (executable might be in different location)
+          './libwarpdeck.so',
+          path.join(path.dirname(path.dirname(Platform.resolvedExecutable)), 'usr', 'bin', 'libwarpdeck.so'),
+          path.join(path.dirname(Platform.resolvedExecutable), '..', 'libwarpdeck.so'),
           // Development path from Flutter project
           '../../../libwarpdeck/build/libwarpdeck.so',
           // Bundled with app (relative)
@@ -117,11 +121,21 @@ class WarpDeckFFI {
         
         DynamicLibrary? lib;
         
+        print('🔍 Platform.resolvedExecutable: ${Platform.resolvedExecutable}');
+        print('🔍 executableDir: $executableDir');
+        print('🔍 Attempting to load libwarpdeck.so from these paths:');
+        for (final path in possiblePaths) {
+          print('  - $path');
+        }
+        
         for (final path in possiblePaths) {
           try {
+            print('🔍 Trying to load libwarpdeck.so from: $path');
             lib = DynamicLibrary.open(path);
+            print('✅ Successfully loaded libwarpdeck.so from: $path');
             break;
           } catch (e) {
+            print('❌ Failed to load from $path: $e');
             continue;
           }
         }
