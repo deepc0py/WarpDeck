@@ -217,7 +217,7 @@ jobs:
         echo "📦 Copying libwarpdeck.so to Flutter bundle..."
         
         # Find the built library (mirroring macOS approach)
-        BUILD_DIR="../../../../../libwarpdeck/build"
+        BUILD_DIR="../../../../../../libwarpdeck/build"
         echo "🔍 Contents of libwarpdeck build directory:"
         ls -la "$BUILD_DIR" 2>/dev/null || echo "  libwarpdeck/build directory not found"
         
