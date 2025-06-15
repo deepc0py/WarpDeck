@@ -236,6 +236,16 @@ jobs:
           fi
         done
         
+        # Copy libwarpdeck.so to AppImage
+        echo "📦 Bundling libwarpdeck.so..."
+        if [ -f "../../../../../../libwarpdeck/build/libwarpdeck.so" ]; then
+          echo "  ✅ Found libwarpdeck.so, copying to AppImage"
+          cp "../../../../../../libwarpdeck/build/libwarpdeck.so" WarpDeck.AppDir/usr/bin/
+        else
+          echo "  ❌ libwarpdeck.so not found at expected path"
+          find ../../../../../../ -name "libwarpdeck.so" 2>/dev/null | head -5 || echo "  No libwarpdeck.so found anywhere"
+        fi
+        
         # Copy system tray dependencies for Steam Deck compatibility
         echo "📦 Bundling system tray dependencies for Steam Deck compatibility..."
         

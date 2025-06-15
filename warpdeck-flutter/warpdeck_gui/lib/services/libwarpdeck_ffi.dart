@@ -101,7 +101,36 @@ class WarpDeckFFI {
         
         _lib = lib;
       } else if (Platform.isLinux) {
-        _lib = DynamicLibrary.open('../../../libwarpdeck/build/libwarpdeck.so');
+        // Try multiple paths for the .so file
+        final executableDir = path.dirname(Platform.resolvedExecutable);
+        final possiblePaths = [
+          // Bundled with AppImage in same directory as executable
+          path.join(executableDir, 'libwarpdeck.so'),
+          // Development path from Flutter project
+          '../../../libwarpdeck/build/libwarpdeck.so',
+          // Bundled with app (relative)
+          'libwarpdeck.so',
+          // System library paths
+          '/usr/local/lib/libwarpdeck.so',
+          '/usr/lib/libwarpdeck.so',
+        ];
+        
+        DynamicLibrary? lib;
+        
+        for (final path in possiblePaths) {
+          try {
+            lib = DynamicLibrary.open(path);
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+        
+        if (lib == null) {
+          throw Exception('Could not load libwarpdeck.so from any of the attempted paths: ${possiblePaths.join(', ')}');
+        }
+        
+        _lib = lib;
       } else {
         throw UnsupportedError('Platform not supported');
       }
