@@ -101,7 +101,7 @@ void APIServer::setup_routes() {
     }
     
     // GET /api/v1/info - Device information endpoint
-    server_->Get("/api/v1/info", [this](const httplib::Request& req, httplib::Response& res) {
+    server_->Get("/api/v1/info", [this](const httplib::Request& /* req */, httplib::Response& res) {
         try {
             std::string json = utils::device_info_to_json(device_info_);
             res.set_content(json, "application/json");
@@ -197,7 +197,7 @@ void APIServer::setup_routes() {
     });
     
     // Set error handler
-    server_->set_error_handler([](const httplib::Request& req, httplib::Response& res) {
+    server_->set_error_handler([](const httplib::Request& /* req */, httplib::Response& res) {
         res.status = 404;
         res.set_content("{\"error_code\":\"NOT_FOUND\",\"message\":\"Endpoint not found\"}", 
                        "application/json");

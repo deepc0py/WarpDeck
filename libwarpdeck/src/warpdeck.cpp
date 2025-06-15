@@ -83,16 +83,15 @@ WarpDeckHandle* warpdeck_create(const Callbacks* callbacks, const char* config_d
         // Set up discovery manager callbacks
         handle->discovery_manager->set_peer_discovered_callback(
             [handle = handle.get()](const PeerInfo& peer) {
-                // Temporarily disabled to test if callback is causing crashes
-                std::cout << "Peer discovered (callback disabled): " << peer.name << std::endl;
-                // std::string json = utils::peer_info_to_json(peer);
-                // safe_call_callback(handle->callbacks.on_peer_discovered, json.c_str());
+                std::cout << "Peer discovered: " << peer.name << std::endl;
+                std::string json = utils::peer_info_to_json(peer);
+                safe_call_callback(handle->callbacks.on_peer_discovered, json.c_str());
             });
             
         handle->discovery_manager->set_peer_lost_callback(
             [handle = handle.get()](const std::string& device_id) {
-                std::cout << "Peer lost (callback disabled): " << device_id << std::endl;
-                // safe_call_callback(handle->callbacks.on_peer_lost, device_id.c_str());
+                std::cout << "Peer lost: " << device_id << std::endl;
+                safe_call_callback(handle->callbacks.on_peer_lost, device_id.c_str());
             });
         
         // Set up transfer manager callbacks

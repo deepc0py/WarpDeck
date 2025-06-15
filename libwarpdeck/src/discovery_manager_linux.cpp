@@ -185,7 +185,7 @@ private:
         }
     }
     
-    static void group_callback(AvahiEntryGroup* group, AvahiEntryGroupState state, void* userdata) {
+    static void group_callback(AvahiEntryGroup* /* group */, AvahiEntryGroupState state, void* /* userdata */) {
         switch (state) {
             case AVAHI_ENTRY_GROUP_ESTABLISHED:
                 std::cout << "Service registered successfully" << std::endl;
@@ -205,14 +205,14 @@ private:
         }
     }
     
-    static void browse_callback(AvahiServiceBrowser* browser,
+    static void browse_callback(AvahiServiceBrowser* /* browser */,
                               AvahiIfIndex interface,
                               AvahiProtocol protocol,
                               AvahiBrowserEvent event,
                               const char* name,
                               const char* type,
                               const char* domain,
-                              AvahiLookupResultFlags flags,
+                              AvahiLookupResultFlags /* flags */,
                               void* userdata) {
         auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
@@ -251,17 +251,17 @@ private:
     }
     
     static void resolve_callback(AvahiServiceResolver* resolver,
-                               AvahiIfIndex interface,
-                               AvahiProtocol protocol,
+                               AvahiIfIndex /* interface */,
+                               AvahiProtocol /* protocol */,
                                AvahiResolverEvent event,
-                               const char* name,
-                               const char* type,
-                               const char* domain,
+                               const char* /* name */,
+                               const char* /* type */,
+                               const char* /* domain */,
                                const char* host_name,
-                               const AvahiAddress* address,
-                               uint16_t port,
+                               const AvahiAddress* /* address */,
+                               uint16_t /* port */,
                                AvahiStringList* txt,
-                               AvahiLookupResultFlags flags,
+                               AvahiLookupResultFlags /* flags */,
                                void* userdata) {
         auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
@@ -282,14 +282,42 @@ private:
                 }
             }
             
+            // Validate required fields before creating PeerInfo
+            const std::vector<std::string> required_fields = {"id", "name", "platform", "port", "fp"};
+            for (const std::string& field : required_fields) {
+                if (txt_data.find(field) == txt_data.end() || txt_data[field].empty()) {
+                    std::cerr << "Missing required field in TXT record: " << field << std::endl;
+                    return; // Skip this peer
+                }
+            }
+            
+            // Parse port with error handling
+            int parsed_port = 0;
+            try {
+                parsed_port = std::stoi(txt_data["port"]);
+                if (parsed_port <= 0 || parsed_port > 65535) {
+                    std::cerr << "Invalid port number: " << parsed_port << std::endl;
+                    return; // Skip this peer
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to parse port: " << txt_data["port"] << " - " << e.what() << std::endl;
+                return; // Skip this peer
+            }
+            
             // Create PeerInfo
             PeerInfo peer;
             peer.id = txt_data["id"];
             peer.name = txt_data["name"];
             peer.platform = txt_data["platform"];
-            peer.port = std::stoi(txt_data["port"]);
+            peer.port = parsed_port;
             peer.fingerprint = txt_data["fp"];
             peer.host_address = host_name;
+            
+            // Skip if this is our own device (self-filtering)
+            if (peer.id == impl->device_id_) {
+                std::cout << "Skipping self-discovery: " << peer.id << std::endl;
+                return;
+            }
             
             // Add to discovered peers
             {
