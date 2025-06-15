@@ -146,7 +146,7 @@ jobs:
     - name: Cache APT packages
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: cmake build-essential pkg-config libssl-dev libavahi-client-dev libgtk-3-dev ninja-build clang libayatana-appindicator3-dev librsvg2-bin imagemagick
+        packages: cmake build-essential pkg-config libssl-dev libavahi-client-dev libgtk-3-dev ninja-build clang libayatana-appindicator3-dev libayatana-ido3-0.4-dev librsvg2-bin imagemagick
         version: 1.0
 
     - name: Setup Flutter with cache
@@ -242,15 +242,31 @@ jobs:
         # Bundle core system tray libraries directly
         mkdir -p WarpDeck.AppDir/usr/lib
         
-        # Copy ayatana libraries if available
-        for lib in libayatana-appindicator3.so.1 libayatana-indicator3.so.7 libdbusmenu-glib.so.4 libdbusmenu-gtk3.so.4; do
-          for path in /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu; do
+        # Detect architecture for correct library paths
+        ARCH=$(dpkg --print-architecture)
+        echo "🔍 Build architecture: $ARCH"
+        
+        # Debug: Show all available ayatana libraries
+        echo "🔍 Available ayatana libraries on build system:"
+        find /usr/lib* /lib* -name "*ayatana*" 2>/dev/null || echo "  None found"
+        echo "🔍 Available dbusmenu libraries:"
+        find /usr/lib* /lib* -name "*dbusmenu*" 2>/dev/null || echo "  None found"
+        
+        # Copy ayatana libraries with architecture-aware paths
+        for lib in libayatana-appindicator3.so.1 libayatana-indicator3.so.7 libayatana-ido3-0.4.so.0 libdbusmenu-glib.so.4 libdbusmenu-gtk3.so.4; do
+          found=false
+          # Try architecture-specific paths first, then generic paths
+          for path in "/usr/lib/$ARCH-linux-gnu" /usr/lib/x86_64-linux-gnu /usr/lib /lib/x86_64-linux-gnu /usr/lib64; do
             if [ -f "$path/$lib" ]; then
-              echo "  -> Bundling $lib from $path"
+              echo "  ✅ Bundling $lib from $path"
               cp "$path/$lib" WarpDeck.AppDir/usr/lib/
+              found=true
               break
             fi
           done
+          if [ "$found" = false ]; then
+            echo "  ❌ Missing: $lib"
+          fi
         done
         
         # Validate bundled libraries
