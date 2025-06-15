@@ -15,7 +15,7 @@ APIClient::APIClient() {}
 APIClient::~APIClient() {}
 
 APIResponse APIClient::get_device_info(const std::string& host, int port, 
-                                     const std::string& expected_fingerprint) {
+                                     const std::string& /* expected_fingerprint */) {
     APIResponse response;
     
     try {
@@ -48,7 +48,7 @@ APIResponse APIClient::get_device_info(const std::string& host, int port,
 }
 
 APIResponse APIClient::request_transfer(const std::string& host, int port,
-                                      const std::string& expected_fingerprint,
+                                      const std::string& /* expected_fingerprint */,
                                       const TransferRequest& request) {
     APIResponse response;
     

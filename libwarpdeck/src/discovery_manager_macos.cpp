@@ -21,6 +21,9 @@ public:
     
     bool start_discovery(const std::string& device_name, const std::string& device_id,
                         const std::string& platform, int port, const std::string& fingerprint) override {
+        // Store our device ID for self-filtering
+        device_id_ = device_id;
+        
         // Create TXT record
         std::map<std::string, std::string> txt_record;
         txt_record["v"] = "1.0";
@@ -123,13 +126,13 @@ public:
     }
 
 private:
-    static void register_callback(DNSServiceRef service,
-                                DNSServiceFlags flags,
+    static void register_callback(DNSServiceRef /* service */,
+                                DNSServiceFlags /* flags */,
                                 DNSServiceErrorType errorCode,
                                 const char* name,
-                                const char* regtype,
-                                const char* domain,
-                                void* context) {
+                                const char* /* regtype */,
+                                const char* /* domain */,
+                                void* /* context */) {
         if (errorCode == kDNSServiceErr_NoError) {
             std::cout << "Service registered: " << name << std::endl;
         } else {
@@ -137,7 +140,7 @@ private:
         }
     }
     
-    static void browse_callback(DNSServiceRef service,
+    static void browse_callback(DNSServiceRef /* service */,
                               DNSServiceFlags flags,
                               uint32_t interfaceIndex,
                               DNSServiceErrorType errorCode,
@@ -183,13 +186,13 @@ private:
         }
     }
     
-    static void resolve_callback(DNSServiceRef service,
-                               DNSServiceFlags flags,
-                               uint32_t interfaceIndex,
+    static void resolve_callback(DNSServiceRef /* service */,
+                               DNSServiceFlags /* flags */,
+                               uint32_t /* interfaceIndex */,
                                DNSServiceErrorType errorCode,
-                               const char* fullname,
+                               const char* /* fullname */,
                                const char* hosttarget,
-                               uint16_t port,
+                               uint16_t /* port */,
                                uint16_t txtLen,
                                const unsigned char* txtRecord,
                                void* context) {
@@ -253,6 +256,12 @@ private:
         peer.port = parsed_port;
         peer.fingerprint = txt_data["fp"];
         peer.host_address = hosttarget;
+        
+        // Skip if this is our own device (self-filtering)
+        if (peer.id == impl->device_id_) {
+            std::cout << "Skipping self-discovery: " << peer.id << std::endl;
+            return;
+        }
         
         // Add to discovered peers
         {
@@ -323,6 +332,7 @@ private:
     std::map<std::string, DNSServiceRef> resolve_refs_;
     std::thread processing_thread_;
     std::atomic<bool> running_{true};
+    std::string device_id_;
 };
 
 
