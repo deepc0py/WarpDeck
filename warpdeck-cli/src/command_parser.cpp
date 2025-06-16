@@ -44,6 +44,7 @@ ParsedCommand CommandParser::parse(const std::vector<std::string>& args) {
             
         case Command::LISTEN:
         case Command::LIST:
+        case Command::DEBUG:
             // No specific requirements
             break;
             
@@ -61,6 +62,7 @@ Command CommandParser::parse_command(const std::string& cmd) {
     if (cmd == "list") return Command::LIST;
     if (cmd == "send") return Command::SEND;
     if (cmd == "config") return Command::CONFIG;
+    if (cmd == "debug") return Command::DEBUG;
     return Command::UNKNOWN;
 }
 

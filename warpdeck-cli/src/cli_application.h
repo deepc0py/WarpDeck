@@ -29,6 +29,7 @@ private:
     int handle_list(const ParsedCommand& cmd);
     int handle_send(const ParsedCommand& cmd);
     int handle_config(const ParsedCommand& cmd);
+    int handle_debug(const ParsedCommand& cmd);
 
     // libwarpdeck callback handlers
     static void on_peer_discovered(const char* peer_json);

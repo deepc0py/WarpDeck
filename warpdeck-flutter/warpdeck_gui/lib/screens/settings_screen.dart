@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 import '../services/warpdeck_service.dart';
+import 'debug_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +15,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _deviceNameController = TextEditingController();
   bool _isEditing = false;
+  int _debugTapCount = 0;
+  DateTime? _lastTapTime;
 
   @override
   void initState() {
@@ -202,7 +205,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsTile(
                 title: 'WarpDeck',
                 subtitle: 'Cross-platform peer-to-peer file sharing',
-                trailing: const Text('v1.0.0'),
+                trailing: GestureDetector(
+                  onTap: _handleVersionTap,
+                  child: const Text('v1.0.0'),
+                ),
               ),
               
               _SettingsTile(
@@ -304,6 +310,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await ref.read(warpDeckServiceProvider.notifier).stop();
     } else {
       await ref.read(warpDeckServiceProvider.notifier).start();
+    }
+  }
+
+  void _handleVersionTap() {
+    final now = DateTime.now();
+    
+    // Reset counter if more than 2 seconds have passed since last tap
+    if (_lastTapTime == null || now.difference(_lastTapTime!).inSeconds > 2) {
+      _debugTapCount = 1;
+    } else {
+      _debugTapCount++;
+    }
+    
+    _lastTapTime = now;
+    
+    // Navigate to debug screen on triple tap
+    if (_debugTapCount >= 3) {
+      _debugTapCount = 0; // Reset counter
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const DebugScreen(),
+        ),
+      );
+      
+      // Show a subtle indication that debug mode was activated
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debug mode activated'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 }

@@ -7,6 +7,13 @@
 #include <thread>
 #include <chrono>
 #include <iomanip>
+#include <sstream>
+#include <curl/curl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 #ifdef __APPLE__
 #include <unistd.h>
@@ -50,6 +57,8 @@ int CLIApplication::run(const std::vector<std::string>& args) {
             return handle_send(cmd);
         case Command::CONFIG:
             return handle_config(cmd);
+        case Command::DEBUG:
+            return handle_debug(cmd);
         default:
             std::cerr << "Unknown command" << std::endl;
             return 1;
@@ -435,6 +444,177 @@ bool CLIApplication::save_device_name_to_config(const std::string& name) {
     } catch (const std::exception&) {
         return false;
     }
+}
+
+// Callback function for curl to write data
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
+    userp->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+int CLIApplication::handle_debug(const ParsedCommand& /* cmd */) {
+    std::cout << "\n🔍 WarpDeck Connection & Services Debug Report\n";
+    std::cout << "===============================================\n";
+    
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::cout << "Generated: " << std::put_time(std::localtime(&time_t), "%Y-%m-%d %H:%M:%S") << "\n\n";
+    
+    // Device connectivity status
+    std::cout << "📡 CONNECTIVITY STATUS:\n";
+    std::cout << "------------------------\n";
+    
+    // Check network interfaces
+    struct ifaddrs *ifaddrs_ptr, *ifa;
+    if (getifaddrs(&ifaddrs_ptr) == 0) {
+        bool has_active_interface = false;
+        std::cout << "Network Interfaces:\n";
+        
+        for (ifa = ifaddrs_ptr; ifa != nullptr; ifa = ifa->ifa_next) {
+            if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+                struct sockaddr_in* addr_in = (struct sockaddr_in*)ifa->ifa_addr;
+                char ip_str[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(addr_in->sin_addr), ip_str, INET_ADDRSTRLEN);
+                
+                if (strcmp(ip_str, "127.0.0.1") != 0) { // Skip loopback
+                    std::cout << "  - " << ifa->ifa_name << ": " << ip_str;
+                    if (ifa->ifa_flags & IFF_UP) {
+                        std::cout << " ✅ (UP)";
+                        has_active_interface = true;
+                    } else {
+                        std::cout << " ❌ (DOWN)";
+                    }
+                    std::cout << "\n";
+                }
+            }
+        }
+        freeifaddrs(ifaddrs_ptr);
+        
+        if (!has_active_interface) {
+            std::cout << "  ⚠️  No active network interfaces found\n";
+        }
+    } else {
+        std::cout << "  ❌ Failed to retrieve network interface information\n";
+    }
+    
+    std::cout << "\n🔧 SERVICE HEALTH CHECKS:\n";
+    std::cout << "--------------------------\n";
+    
+    // Check WarpDeck Core Service (if running)
+    std::cout << "WarpDeck Core Service:\n";
+    if (warpdeck_handle_) {
+        std::cout << "  Status: ✅ RUNNING\n";
+        std::cout << "  Device Name: " << device_name_ << "\n";
+        std::cout << "  Config Directory: " << config_dir_ << "\n";
+        
+        // Show discovered peers
+        {
+            std::lock_guard<std::mutex> lock(peers_mutex_);
+            std::cout << "  Discovered Peers: " << discovered_peers_.size() << "\n";
+            for (const auto& [id, peer] : discovered_peers_) {
+                std::cout << "    - " << peer.name << " (" << peer.platform << ")\n";
+            }
+        }
+    } else {
+        std::cout << "  Status: ❌ NOT RUNNING\n";
+        std::cout << "  Note: Use 'warpdeck listen' to start the service\n";
+    }
+    
+    std::cout << "\n";
+    
+    // Check GitHub API (Update Service)
+    std::cout << "Update Service (GitHub API):\n";
+    std::cout << "  Endpoint: https://api.github.com/repos/warpdeck/warpdeck\n";
+    
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        std::string response_data;
+        auto start_time = std::chrono::high_resolution_clock::now();
+        
+        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/warpdeck/warpdeck/releases/latest");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "WarpDeck-CLI/1.0");
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        
+        CURLcode res = curl_easy_perform(curl);
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        
+        long response_code;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+        curl_easy_cleanup(curl);
+        
+        if (res == CURLE_OK) {
+            if (response_code == 200) {
+                std::cout << "  Status: ✅ HEALTHY\n";
+                std::cout << "  HTTP Status: " << response_code << "\n";
+                std::cout << "  Latency: " << duration.count() << "ms\n";
+                
+                try {
+                    nlohmann::json release_data = nlohmann::json::parse(response_data);
+                    if (release_data.contains("tag_name")) {
+                        std::cout << "  Latest Version: " << release_data["tag_name"] << "\n";
+                    }
+                } catch (const std::exception&) {
+                    // Ignore JSON parsing errors
+                }
+            } else {
+                std::cout << "  Status: ⚠️  UNHEALTHY\n";
+                std::cout << "  HTTP Status: " << response_code << "\n";
+                std::cout << "  Latency: " << duration.count() << "ms\n";
+            }
+        } else {
+            std::cout << "  Status: ❌ ERROR\n";
+            std::cout << "  Error: " << curl_easy_strerror(res) << "\n";
+            if (res == CURLE_OPERATION_TIMEDOUT) {
+                std::cout << "  Note: Request timed out after 10 seconds\n";
+            }
+        }
+    } else {
+        std::cout << "  Status: ❌ ERROR\n";
+        std::cout << "  Error: Failed to initialize HTTP client\n";
+    }
+    
+    std::cout << "\n📋 CONFIGURATION:\n";
+    std::cout << "------------------\n";
+    std::cout << "Config Directory: " << config_dir_ << "\n";
+    std::cout << "Device Name: " << get_default_device_name() << "\n";
+    
+    if (!download_path_.empty()) {
+        std::cout << "Download Path: " << download_path_ << "\n";
+    }
+    
+    // Show config file status
+    std::string config_file = config_dir_ + "/config.json";
+    if (std::filesystem::exists(config_file)) {
+        std::cout << "Config File: ✅ EXISTS\n";
+        try {
+            std::ifstream file(config_file);
+            nlohmann::json config;
+            file >> config;
+            
+            if (config.contains("device_name")) {
+                std::cout << "  Stored Device Name: " << config["device_name"] << "\n";
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  ⚠️  Config file exists but has parsing errors: " << e.what() << "\n";
+        }
+    } else {
+        std::cout << "Config File: ❌ NOT FOUND (will be created when needed)\n";
+    }
+    
+    std::cout << "\n💡 TROUBLESHOOTING TIPS:\n";
+    std::cout << "------------------------\n";
+    std::cout << "• If no peers are discovered, check firewall settings\n";
+    std::cout << "• Ensure all devices are on the same network\n";
+    std::cout << "• Use 'warpdeck listen --name <custom-name>' to set a device name\n";
+    std::cout << "• Check network connectivity if GitHub API is unreachable\n";
+    std::cout << "• Restart the service if experiencing issues: Ctrl+C then 'warpdeck listen'\n";
+    
+    std::cout << "\n";
+    return 0;
 }
 
 void CLIApplication::wait_for_signal() {
