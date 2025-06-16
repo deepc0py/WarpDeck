@@ -1,0 +1,7 @@
+Binary data simulation (representing an image or binary file):
+
+SGVsbG8gV29ybGQhIFRoaXMgaXMgYSBiaW5hcnkgZmlsZSBzaW11bGF0aW9uLg==
+VGhpcyB3b3VsZCBiZSBhY3R1YWwgYmluYXJ5IGRhdGEgaW4gYSByZWFsIGZpbGU=
+QnV0IGZvciB0ZXN0aW5nIHB1cnBvc2VzLCB3ZSd1c2UgYmFzZTY0IGVuY29kaW5n
+
+File size should be preserved exactly during transfer.

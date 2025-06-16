@@ -1,7 +1,41 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(avahi-browse:*)",
+      "Bash(dns-sd:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(timeout:*)",
+      "Bash(docker build:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker exec:*)",
+      "Bash(mkdir:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(echo:*)",
+      "Bash(git add:*)",
+      "Bash(gh issue view:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(make:*)",
+      "Bash(./warpdeck:*)",
+      "Bash(find:*)",
+      "Bash(gh issue close:*)",
+      "Bash(cmake:*)",
+      "Bash(ls:*)",
+      "Bash(g++:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git pull:*)",
+      "Bash(flutter config:*)"
     ],
     "deny": []
   }
