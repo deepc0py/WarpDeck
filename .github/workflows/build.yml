@@ -54,7 +54,7 @@ jobs:
 
     - name: Install dependencies with vcpkg
       run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json catch2
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json curl catch2
 
     - name: Build and test libwarpdeck
       run: |
@@ -98,7 +98,8 @@ jobs:
           build-essential \
           pkg-config \
           libssl-dev \
-          libavahi-client-dev
+          libavahi-client-dev \
+          libcurl4-openssl-dev
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -117,7 +118,7 @@ jobs:
 
     - name: Install dependencies with vcpkg
       run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json curl curl
 
     - name: Build libwarpdeck
       run: |
@@ -177,6 +178,7 @@ jobs:
           pkg-config \
           libssl-dev \
           libavahi-client-dev \
+          libcurl4-openssl-dev \
           libgtk-3-dev \
           ninja-build \
           clang \
@@ -216,7 +218,7 @@ jobs:
 
     - name: Install dependencies with vcpkg
       run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json curl
 
     - name: Build libwarpdeck
       run: |
@@ -275,6 +277,7 @@ jobs:
           pkg-config \
           libssl-dev \
           libavahi-client-dev \
+          libcurl4-openssl-dev \
           libgtk-3-dev \
           ninja-build \
           clang \
@@ -314,7 +317,7 @@ jobs:
 
     - name: Install dependencies with vcpkg
       run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
+        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json curl
 
     - name: Quick build test
       run: |
