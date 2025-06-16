@@ -13,12 +13,15 @@
 #include <thread>
 #include <iostream>
 #include <memory>
+#include <chrono>
+#include <algorithm>
 
 namespace warpdeck {
 
 class DiscoveryManagerLinux : public DiscoveryManager::Impl {
 public:
-    DiscoveryManagerLinux(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr) {}
+    DiscoveryManagerLinux(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr),
+                         reconnect_attempts_(0), max_reconnect_attempts_(10), base_reconnect_delay_ms_(1000) {}
     
     ~DiscoveryManagerLinux() {
         stop_discovery();
@@ -94,6 +97,66 @@ public:
     }
 
 private:
+    void schedule_reconnect() {
+        if (reconnect_attempts_ >= max_reconnect_attempts_) {
+            std::cerr << "Max reconnection attempts reached (" << max_reconnect_attempts_ << "), giving up" << std::endl;
+            running_ = false;
+            return;
+        }
+        
+        if (reconnecting_.exchange(true)) {
+            return; // Already reconnecting
+        }
+        
+        reconnect_attempts_++;
+        
+        // Calculate exponential backoff delay: base_delay * 2^(attempts-1)
+        int delay_ms = base_reconnect_delay_ms_ * (1 << (reconnect_attempts_ - 1));
+        // Cap the delay at 30 seconds
+        delay_ms = std::min(delay_ms, 30000);
+        
+        std::cout << "Scheduling reconnection attempt " << reconnect_attempts_ 
+                  << "/" << max_reconnect_attempts_ << " in " << delay_ms << "ms" << std::endl;
+        
+        // Schedule reconnection in a separate thread
+        std::thread([this, delay_ms]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+            if (running_) {
+                reconnect();
+            }
+        }).detach();
+    }
+    
+    void reconnect() {
+        std::cout << "Attempting to reconnect to Avahi daemon..." << std::endl;
+        
+        // Clean up existing client
+        if (group_) {
+            avahi_entry_group_free(group_);
+            group_ = nullptr;
+        }
+        
+        if (client_) {
+            avahi_client_free(client_);
+            client_ = nullptr;
+        }
+        
+        // Try to create a new client
+        int error;
+        client_ = avahi_client_new(avahi_simple_poll_get(simple_poll_), 
+                                  AVAHI_CLIENT_NO_FAIL, client_callback, this, &error);
+        
+        if (!client_) {
+            std::cerr << "Reconnection failed: " << avahi_strerror(error) << std::endl;
+            reconnecting_ = false;
+            schedule_reconnect(); // Try again
+        } else {
+            std::cout << "Successfully reconnected to Avahi daemon" << std::endl;
+            reconnect_attempts_ = 0; // Reset counter on successful reconnection
+            reconnecting_ = false;
+        }
+    }
+
     static void client_callback(AvahiClient* client, AvahiClientState state, void* userdata) {
         auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
@@ -106,7 +169,7 @@ private:
                 
             case AVAHI_CLIENT_FAILURE:
                 std::cerr << "Avahi client failure: " << avahi_strerror(avahi_client_errno(client)) << std::endl;
-                impl->running_ = false;
+                impl->schedule_reconnect();
                 break;
                 
             case AVAHI_CLIENT_S_COLLISION:
@@ -352,6 +415,12 @@ private:
     std::string platform_;
     int port_;
     std::string fingerprint_;
+    
+    // Reconnection logic
+    std::atomic<int> reconnect_attempts_;
+    const int max_reconnect_attempts_;
+    const int base_reconnect_delay_ms_;
+    std::atomic<bool> reconnecting_{false};
 };
 
 void DiscoveryManager::create_platform_impl() {
