@@ -96,7 +96,9 @@ jobs:
 
     - name: Build CLI
       run: |
-        cd warpdeck-cli
+        sudp apt-get update
+	sudo apt-get install -y curl
+	cd warpdeck-cli
         rm -rf build
         mkdir -p build && cd build
         cmake -DCMAKE_BUILD_TYPE=Release \
