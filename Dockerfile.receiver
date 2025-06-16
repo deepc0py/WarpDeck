@@ -1,0 +1,82 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    libssl-dev \
+    libavahi-client-dev \
+    libavahi-common-dev \
+    avahi-daemon \
+    avahi-utils \
+    dbus \
+    iproute2 \
+    iputils-ping \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Build libwarpdeck
+WORKDIR /app/libwarpdeck
+RUN rm -rf build && mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc)
+
+# Create directories
+RUN mkdir -p /app/files_to_send /app/received_files
+
+# Build test application
+WORKDIR /app
+COPY test_receiver.cpp /app/
+RUN g++ -std=c++17 -I/app -L/app/libwarpdeck/build -o test_receiver test_receiver.cpp -lwarpdeck -pthread -lssl -lcrypto -lavahi-client -lavahi-common
+
+# Configure Avahi
+RUN mkdir -p /etc/avahi && \
+    echo "[server]" > /etc/avahi/avahi-daemon.conf && \
+    echo "host-name=receiver-device" >> /etc/avahi/avahi-daemon.conf && \
+    echo "domain-name=local" >> /etc/avahi/avahi-daemon.conf && \
+    echo "use-ipv4=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "use-ipv6=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "check-response-ttl=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "use-iff-running=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "enable-dbus=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "disallow-other-stacks=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "" >> /etc/avahi/avahi-daemon.conf && \
+    echo "[publish]" >> /etc/avahi/avahi-daemon.conf && \
+    echo "disable-publishing=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "disable-user-service-publishing=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "add-service-cookie=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-addresses=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-hinfo=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-workstation=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-domain=yes" >> /etc/avahi/avahi-daemon.conf
+
+# Create startup script
+RUN echo '#!/bin/bash' > /app/start_receiver.sh && \
+    echo 'echo "=== RECEIVER CONTAINER STARTING ==="' >> /app/start_receiver.sh && \
+    echo 'echo "Setting up D-Bus and Avahi..."' >> /app/start_receiver.sh && \
+    echo 'mkdir -p /run/dbus' >> /app/start_receiver.sh && \
+    echo 'dbus-daemon --system --fork' >> /app/start_receiver.sh && \
+    echo 'sleep 2' >> /app/start_receiver.sh && \
+    echo 'avahi-daemon -D' >> /app/start_receiver.sh && \
+    echo 'sleep 3' >> /app/start_receiver.sh && \
+    echo 'echo "Network configuration:"' >> /app/start_receiver.sh && \
+    echo 'ip addr show' >> /app/start_receiver.sh && \
+    echo 'echo "Received files directory:"' >> /app/start_receiver.sh && \
+    echo 'ls -la /app/received_files/' >> /app/start_receiver.sh && \
+    echo 'echo "Starting WarpDeck receiver..."' >> /app/start_receiver.sh && \
+    echo 'export LD_LIBRARY_PATH=/app/libwarpdeck/build:$LD_LIBRARY_PATH' >> /app/start_receiver.sh && \
+    echo './test_receiver' >> /app/start_receiver.sh && \
+    chmod +x /app/start_receiver.sh
+
+EXPOSE 54321-65534
+
+CMD ["/app/start_receiver.sh"]

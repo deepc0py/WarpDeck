@@ -1,0 +1,88 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    libssl-dev \
+    libavahi-client-dev \
+    libavahi-common-dev \
+    avahi-daemon \
+    avahi-utils \
+    dbus \
+    iproute2 \
+    iputils-ping \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Build libwarpdeck
+WORKDIR /app/libwarpdeck
+RUN rm -rf build && mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc)
+
+# Create directories
+RUN mkdir -p /app/files_to_send /app/received_files
+
+# Build test application
+WORKDIR /app
+COPY test_sender.cpp /app/
+RUN g++ -std=c++17 -I/app -L/app/libwarpdeck/build -o test_sender test_sender.cpp -lwarpdeck -pthread -lssl -lcrypto -lavahi-client -lavahi-common
+
+# Create some test files to send
+RUN echo "Hello from Sender Container!" > /app/files_to_send/hello.txt && \
+    echo "This is a larger test file with more content for transfer testing." > /app/files_to_send/large_file.txt && \
+    echo "Binary data simulation: $(dd if=/dev/urandom bs=1024 count=10 2>/dev/null | base64)" > /app/files_to_send/binary_test.txt && \
+    echo "Timestamp: $(date)" > /app/files_to_send/timestamp.txt
+
+# Configure Avahi
+RUN mkdir -p /etc/avahi && \
+    echo "[server]" > /etc/avahi/avahi-daemon.conf && \
+    echo "host-name=sender-device" >> /etc/avahi/avahi-daemon.conf && \
+    echo "domain-name=local" >> /etc/avahi/avahi-daemon.conf && \
+    echo "use-ipv4=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "use-ipv6=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "check-response-ttl=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "use-iff-running=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "enable-dbus=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "disallow-other-stacks=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "" >> /etc/avahi/avahi-daemon.conf && \
+    echo "[publish]" >> /etc/avahi/avahi-daemon.conf && \
+    echo "disable-publishing=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "disable-user-service-publishing=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "add-service-cookie=no" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-addresses=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-hinfo=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-workstation=yes" >> /etc/avahi/avahi-daemon.conf && \
+    echo "publish-domain=yes" >> /etc/avahi/avahi-daemon.conf
+
+# Create startup script
+RUN echo '#!/bin/bash' > /app/start_sender.sh && \
+    echo 'echo "=== SENDER CONTAINER STARTING ==="' >> /app/start_sender.sh && \
+    echo 'echo "Setting up D-Bus and Avahi..."' >> /app/start_sender.sh && \
+    echo 'mkdir -p /run/dbus' >> /app/start_sender.sh && \
+    echo 'dbus-daemon --system --fork' >> /app/start_sender.sh && \
+    echo 'sleep 2' >> /app/start_sender.sh && \
+    echo 'avahi-daemon -D' >> /app/start_sender.sh && \
+    echo 'sleep 3' >> /app/start_sender.sh && \
+    echo 'echo "Network configuration:"' >> /app/start_sender.sh && \
+    echo 'ip addr show' >> /app/start_sender.sh && \
+    echo 'echo "Available files to send:"' >> /app/start_sender.sh && \
+    echo 'ls -la /app/files_to_send/' >> /app/start_sender.sh && \
+    echo 'echo "Starting WarpDeck sender..."' >> /app/start_sender.sh && \
+    echo 'export LD_LIBRARY_PATH=/app/libwarpdeck/build:$LD_LIBRARY_PATH' >> /app/start_sender.sh && \
+    echo './test_sender' >> /app/start_sender.sh && \
+    chmod +x /app/start_sender.sh
+
+EXPOSE 54321-65534
+
+CMD ["/app/start_sender.sh"]

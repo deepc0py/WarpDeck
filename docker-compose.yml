@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  warpdeck-sender:
+    build: 
+      context: .
+      dockerfile: Dockerfile.sender
+    container_name: warpdeck-sender
+    hostname: warpdeck-sender
+    networks:
+      - warpdeck-network
+    volumes:
+      - ./sender_files:/app/files_to_send
+    environment:
+      - DEVICE_NAME=Sender-Device
+      - DEVICE_ID=sender-001
+      - AVAHI_ALLOW_INTERFACES=eth0
+    privileged: true
+    
+  warpdeck-receiver:
+    build:
+      context: .
+      dockerfile: Dockerfile.receiver
+    container_name: warpdeck-receiver
+    hostname: warpdeck-receiver
+    networks:
+      - warpdeck-network
+    volumes:
+      - ./receiver_files:/app/received_files
+    environment:
+      - DEVICE_NAME=Receiver-Device
+      - DEVICE_ID=receiver-001
+      - AVAHI_ALLOW_INTERFACES=eth0
+    privileged: true
+
+networks:
+  warpdeck-network:
+    driver: bridge
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

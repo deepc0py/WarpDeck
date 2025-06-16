@@ -1,0 +1,12 @@
+This is a test document from the sender container.
+
+It contains multiple lines of text to test the file transfer functionality.
+
+The file transfer should preserve the exact content including:
+- Line breaks
+- Special characters: áéíóú ñ ç
+- Numbers: 1234567890
+- Symbols: !@#$%^&*()_+-=[]{}|;:,.<>?
+
+Timestamp: $(date)
+Container: Sender
