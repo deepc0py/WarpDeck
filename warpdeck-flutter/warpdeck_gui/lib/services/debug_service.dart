@@ -185,7 +185,7 @@ class WarpDeckHealthService extends DebuggableService {
 }
 
 class UpdateHealthService extends DebuggableService {
-  static const String _githubApiUrl = 'https://api.github.com/repos/warpdeck/warpdeck';
+  static const String _githubApiUrl = 'https://api.github.com/repos/deepc0py/WarpDeck';
 
   @override
   String get serviceName => 'Update Service (GitHub API)';

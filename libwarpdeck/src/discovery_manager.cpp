@@ -1,5 +1,6 @@
 #include "discovery_manager.h"
 #include "utils.h"
+#include "logger.h"
 #include <thread>
 #include <chrono>
 
@@ -20,6 +21,9 @@ bool DiscoveryManager::start(const std::string& device_name, const std::string& 
     if (running_) {
         return false;
     }
+    
+    // Set debug logging for discovery components
+    Logger::instance().set_log_level(LogLevel::DEBUG);
     
     // Create platform-specific implementation if not already created
     if (!impl_) {

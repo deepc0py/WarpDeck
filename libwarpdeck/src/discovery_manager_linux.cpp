@@ -2,6 +2,7 @@
 
 #include "discovery_manager.h"
 #include "utils.h"
+#include "logger.h"
 #include <avahi-client/client.h>
 #include <avahi-client/publish.h>
 #include <avahi-client/lookup.h>
@@ -21,31 +22,40 @@ namespace warpdeck {
 class DiscoveryManagerLinux : public DiscoveryManager::Impl {
 public:
     DiscoveryManagerLinux(DiscoveryManager* parent) : parent_(parent), client_(nullptr), simple_poll_(nullptr), group_(nullptr),
-                         reconnect_attempts_(0), max_reconnect_attempts_(10), base_reconnect_delay_ms_(1000) {}
+                         reconnect_attempts_(0), max_reconnect_attempts_(10), base_reconnect_delay_ms_(1000) {
+        LOG_DISCOVERY_INFO() << "Creating Linux discovery manager";
+    }
     
     ~DiscoveryManagerLinux() {
+        LOG_DISCOVERY_INFO() << "Destroying Linux discovery manager";
         stop_discovery();
     }
     
     bool start_discovery(const std::string& device_name, const std::string& device_id,
                         const std::string& platform, int port, const std::string& fingerprint) override {
+        LOG_DISCOVERY_INFO() << "Starting Linux discovery for device: " << device_name << " (ID: " << device_id << ")";
+        LOG_DISCOVERY_DEBUG() << "Platform: " << platform << ", Port: " << port;
+        LOG_DISCOVERY_DEBUG() << "Fingerprint: " << fingerprint.substr(0, 16) << "...";
+        
         // Create simple poll object
         simple_poll_ = avahi_simple_poll_new();
         if (!simple_poll_) {
-            std::cerr << "Failed to create Avahi simple poll" << std::endl;
+            LOG_DISCOVERY_ERROR() << "Failed to create Avahi simple poll";
             return false;
         }
         
         // Create client
         int error;
+        LOG_DISCOVERY_DEBUG() << "Creating Avahi client...";
         client_ = avahi_client_new(avahi_simple_poll_get(simple_poll_), 
                                   AVAHI_CLIENT_NO_FAIL, client_callback, this, &error);
         if (!client_) {
-            std::cerr << "Failed to create Avahi client: " << avahi_strerror(error) << std::endl;
+            LOG_DISCOVERY_ERROR() << "Failed to create Avahi client: " << avahi_strerror(error);
             avahi_simple_poll_free(simple_poll_);
             simple_poll_ = nullptr;
             return false;
         }
+        LOG_DISCOVERY_INFO() << "Successfully created Avahi client";
         
         device_name_ = device_name;
         device_id_ = device_id;
@@ -56,32 +66,41 @@ public:
         // Register service and start browsing will happen in client callback
         
         // Start processing thread
+        LOG_DISCOVERY_DEBUG() << "Starting Avahi event processing thread";
         processing_thread_ = std::thread(&DiscoveryManagerLinux::process_events, this);
         
+        LOG_DISCOVERY_INFO() << "Successfully started Linux discovery service";
         return true;
     }
     
     void stop_discovery() override {
+        LOG_DISCOVERY_INFO() << "Stopping Linux discovery service";
         running_ = false;
         
         if (processing_thread_.joinable()) {
+            LOG_DISCOVERY_DEBUG() << "Waiting for processing thread to finish";
             processing_thread_.join();
         }
         
         if (group_) {
+            LOG_DISCOVERY_DEBUG() << "Freeing Avahi entry group";
             avahi_entry_group_free(group_);
             group_ = nullptr;
         }
         
         if (client_) {
+            LOG_DISCOVERY_DEBUG() << "Freeing Avahi client";
             avahi_client_free(client_);
             client_ = nullptr;
         }
         
         if (simple_poll_) {
+            LOG_DISCOVERY_DEBUG() << "Freeing Avahi simple poll";
             avahi_simple_poll_free(simple_poll_);
             simple_poll_ = nullptr;
         }
+        
+        LOG_DISCOVERY_INFO() << "Linux discovery service stopped";
     }
     
     void update_service_info(const std::string& device_name, const std::string& device_id,
@@ -99,7 +118,7 @@ public:
 private:
     void schedule_reconnect() {
         if (reconnect_attempts_ >= max_reconnect_attempts_) {
-            std::cerr << "Max reconnection attempts reached (" << max_reconnect_attempts_ << "), giving up" << std::endl;
+            LOG_DISCOVERY_ERROR() << "Max reconnection attempts reached (" << max_reconnect_attempts_ << "), giving up";
             running_ = false;
             return;
         }
@@ -115,8 +134,8 @@ private:
         // Cap the delay at 30 seconds
         delay_ms = std::min(delay_ms, 30000);
         
-        std::cout << "Scheduling reconnection attempt " << reconnect_attempts_ 
-                  << "/" << max_reconnect_attempts_ << " in " << delay_ms << "ms" << std::endl;
+        LOG_DISCOVERY_WARN() << "Scheduling reconnection attempt " << reconnect_attempts_ 
+                            << "/" << max_reconnect_attempts_ << " in " << delay_ms << "ms";
         
         // Schedule reconnection in a separate thread
         std::thread([this, delay_ms]() {
@@ -128,7 +147,7 @@ private:
     }
     
     void reconnect() {
-        std::cout << "Attempting to reconnect to Avahi daemon..." << std::endl;
+        LOG_DISCOVERY_INFO() << "Attempting to reconnect to Avahi daemon...";
         
         // Clean up existing client
         if (group_) {
@@ -147,11 +166,11 @@ private:
                                   AVAHI_CLIENT_NO_FAIL, client_callback, this, &error);
         
         if (!client_) {
-            std::cerr << "Reconnection failed: " << avahi_strerror(error) << std::endl;
+            LOG_DISCOVERY_ERROR() << "Reconnection failed: " << avahi_strerror(error);
             reconnecting_ = false;
             schedule_reconnect(); // Try again
         } else {
-            std::cout << "Successfully reconnected to Avahi daemon" << std::endl;
+            LOG_DISCOVERY_INFO() << "Successfully reconnected to Avahi daemon";
             reconnect_attempts_ = 0; // Reset counter on successful reconnection
             reconnecting_ = false;
         }
@@ -162,18 +181,22 @@ private:
         
         switch (state) {
             case AVAHI_CLIENT_S_RUNNING:
+                LOG_DISCOVERY_INFO() << "Avahi client is running, registering service and starting browsing";
                 // Server is running, register our service
                 impl->register_service();
                 impl->start_browsing();
                 break;
                 
             case AVAHI_CLIENT_FAILURE:
-                std::cerr << "Avahi client failure: " << avahi_strerror(avahi_client_errno(client)) << std::endl;
+                LOG_DISCOVERY_ERROR() << "Avahi client failure: " << avahi_strerror(avahi_client_errno(client));
                 impl->schedule_reconnect();
                 break;
                 
             case AVAHI_CLIENT_S_COLLISION:
+                LOG_DISCOVERY_WARN() << "Avahi client collision detected";
+                // Fall through
             case AVAHI_CLIENT_S_REGISTERING:
+                LOG_DISCOVERY_DEBUG() << "Avahi client is registering, resetting group";
                 // Server is registering, reset our group
                 if (impl->group_) {
                     avahi_entry_group_reset(impl->group_);
@@ -181,17 +204,20 @@ private:
                 break;
                 
             case AVAHI_CLIENT_CONNECTING:
+                LOG_DISCOVERY_DEBUG() << "Avahi client is connecting to daemon";
                 break;
         }
     }
     
     void register_service() {
+        LOG_DISCOVERY_DEBUG() << "Registering Avahi service: " << device_name_;
         if (!group_) {
             group_ = avahi_entry_group_new(client_, group_callback, this);
             if (!group_) {
-                std::cerr << "Failed to create Avahi entry group" << std::endl;
+                LOG_DISCOVERY_ERROR() << "Failed to create Avahi entry group";
                 return;
             }
+            LOG_DISCOVERY_DEBUG() << "Created Avahi entry group";
         }
         
         if (avahi_entry_group_is_empty(group_)) {
@@ -220,18 +246,22 @@ private:
             avahi_string_list_free(txt);
             
             if (ret < 0) {
-                std::cerr << "Failed to add service: " << avahi_strerror(ret) << std::endl;
+                LOG_DISCOVERY_ERROR() << "Failed to add service: " << avahi_strerror(ret);
                 return;
             }
+            LOG_DISCOVERY_DEBUG() << "Successfully added service to entry group";
             
             ret = avahi_entry_group_commit(group_);
             if (ret < 0) {
-                std::cerr << "Failed to commit entry group: " << avahi_strerror(ret) << std::endl;
+                LOG_DISCOVERY_ERROR() << "Failed to commit entry group: " << avahi_strerror(ret);
+            } else {
+                LOG_DISCOVERY_DEBUG() << "Successfully committed entry group";
             }
         }
     }
     
     void start_browsing() {
+        LOG_DISCOVERY_INFO() << "Starting Avahi service browsing for _warpdeck._tcp";
         AvahiServiceBrowser* browser = avahi_service_browser_new(
             client_,
             AVAHI_IF_UNSPEC,
@@ -244,26 +274,31 @@ private:
         );
         
         if (!browser) {
-            std::cerr << "Failed to create service browser" << std::endl;
+            LOG_DISCOVERY_ERROR() << "Failed to create service browser";
+        } else {
+            LOG_DISCOVERY_INFO() << "Successfully started service browsing";
         }
     }
     
     static void group_callback(AvahiEntryGroup* /* group */, AvahiEntryGroupState state, void* /* userdata */) {
         switch (state) {
             case AVAHI_ENTRY_GROUP_ESTABLISHED:
-                std::cout << "Service registered successfully" << std::endl;
+                LOG_DISCOVERY_INFO() << "Avahi service registered successfully";
                 break;
                 
             case AVAHI_ENTRY_GROUP_COLLISION:
-                std::cerr << "Service name collision" << std::endl;
+                LOG_DISCOVERY_ERROR() << "Service name collision detected";
                 break;
                 
             case AVAHI_ENTRY_GROUP_FAILURE:
-                std::cerr << "Entry group failure" << std::endl;
+                LOG_DISCOVERY_ERROR() << "Avahi entry group failure";
                 break;
                 
             case AVAHI_ENTRY_GROUP_UNCOMMITED:
+                LOG_DISCOVERY_DEBUG() << "Entry group uncommitted";
+                break;
             case AVAHI_ENTRY_GROUP_REGISTERING:
+                LOG_DISCOVERY_DEBUG() << "Entry group registering";
                 break;
         }
     }
@@ -281,6 +316,8 @@ private:
         
         switch (event) {
             case AVAHI_BROWSER_NEW:
+                LOG_DISCOVERY_INFO() << "Discovered new service: " << name;
+                LOG_DISCOVERY_DEBUG() << "Service type: " << type << ", Domain: " << domain;
                 // New service found, resolve it
                 avahi_service_resolver_new(
                     impl->client_,
@@ -297,6 +334,7 @@ private:
                 break;
                 
             case AVAHI_BROWSER_REMOVE:
+                LOG_DISCOVERY_INFO() << "Service removed: " << name;
                 // Service removed
                 if (impl->parent_->peer_lost_callback_) {
                     impl->parent_->peer_lost_callback_(name);
@@ -304,11 +342,14 @@ private:
                 break;
                 
             case AVAHI_BROWSER_ALL_FOR_NOW:
+                LOG_DISCOVERY_DEBUG() << "Browse: All for now";
+                break;
             case AVAHI_BROWSER_CACHE_EXHAUSTED:
+                LOG_DISCOVERY_DEBUG() << "Browse: Cache exhausted";
                 break;
                 
             case AVAHI_BROWSER_FAILURE:
-                std::cerr << "Service browser failure" << std::endl;
+                LOG_DISCOVERY_ERROR() << "Service browser failure";
                 break;
         }
     }
@@ -329,6 +370,7 @@ private:
         auto* impl = static_cast<DiscoveryManagerLinux*>(userdata);
         
         if (event == AVAHI_RESOLVER_FOUND) {
+            LOG_DISCOVERY_DEBUG() << "Resolving service, host: " << host_name;
             // Parse TXT record
             std::map<std::string, std::string> txt_data;
             for (AvahiStringList* l = txt; l; l = l->next) {
@@ -349,7 +391,7 @@ private:
             const std::vector<std::string> required_fields = {"id", "name", "platform", "port", "fp"};
             for (const std::string& field : required_fields) {
                 if (txt_data.find(field) == txt_data.end() || txt_data[field].empty()) {
-                    std::cerr << "Missing required field in TXT record: " << field << std::endl;
+                    LOG_DISCOVERY_WARN() << "Missing required field in TXT record: " << field;
                     return; // Skip this peer
                 }
             }
@@ -359,11 +401,11 @@ private:
             try {
                 parsed_port = std::stoi(txt_data["port"]);
                 if (parsed_port <= 0 || parsed_port > 65535) {
-                    std::cerr << "Invalid port number: " << parsed_port << std::endl;
+                    LOG_DISCOVERY_WARN() << "Invalid port number: " << parsed_port;
                     return; // Skip this peer
                 }
             } catch (const std::exception& e) {
-                std::cerr << "Failed to parse port: " << txt_data["port"] << " - " << e.what() << std::endl;
+                LOG_DISCOVERY_WARN() << "Failed to parse port: " << txt_data["port"] << " - " << e.what();
                 return; // Skip this peer
             }
             
@@ -378,9 +420,13 @@ private:
             
             // Skip if this is our own device (self-filtering)
             if (peer.id == impl->device_id_) {
-                std::cout << "Skipping self-discovery: " << peer.id << std::endl;
+                LOG_DISCOVERY_DEBUG() << "Skipping self-discovery for device: " << peer.id;
                 return;
             }
+            
+            LOG_DISCOVERY_INFO() << "Successfully resolved peer: " << peer.name 
+                                << " (" << peer.id << ") at " << peer.host_address 
+                                << ":" << peer.port << " [" << peer.platform << "]";
             
             // Add to discovered peers
             {
@@ -392,6 +438,8 @@ private:
             if (impl->parent_->peer_discovered_callback_) {
                 impl->parent_->peer_discovered_callback_(peer);
             }
+        } else {
+            LOG_DISCOVERY_DEBUG() << "Service resolution failed or incomplete";
         }
         
         avahi_service_resolver_free(resolver);
