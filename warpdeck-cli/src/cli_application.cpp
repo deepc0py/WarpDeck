@@ -8,7 +8,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
-#include <curl/curl.h>
+// #include <curl/curl.h> // Removed CURL dependency
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -446,11 +446,7 @@ bool CLIApplication::save_device_name_to_config(const std::string& name) {
     }
 }
 
-// Callback function for curl to write data
-static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
-    userp->append((char*)contents, size * nmemb);
-    return size * nmemb;
-}
+// CURL callback removed - using simplified approach
 
 int CLIApplication::handle_debug(const ParsedCommand& /* cmd */) {
     std::cout << "\n🔍 WarpDeck Connection & Services Debug Report\n";
@@ -522,60 +518,10 @@ int CLIApplication::handle_debug(const ParsedCommand& /* cmd */) {
     
     std::cout << "\n";
     
-    // Check GitHub API (Update Service)
-    std::cout << "Update Service (GitHub API):\n";
-    std::cout << "  Endpoint: https://api.github.com/repos/warpdeck/warpdeck\n";
-    
-    CURL* curl = curl_easy_init();
-    if (curl) {
-        std::string response_data;
-        auto start_time = std::chrono::high_resolution_clock::now();
-        
-        curl_easy_setopt(curl, CURLOPT_URL, "https://api.github.com/repos/warpdeck/warpdeck/releases/latest");
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "WarpDeck-CLI/1.0");
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        
-        CURLcode res = curl_easy_perform(curl);
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-        
-        long response_code;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        curl_easy_cleanup(curl);
-        
-        if (res == CURLE_OK) {
-            if (response_code == 200) {
-                std::cout << "  Status: ✅ HEALTHY\n";
-                std::cout << "  HTTP Status: " << response_code << "\n";
-                std::cout << "  Latency: " << duration.count() << "ms\n";
-                
-                try {
-                    nlohmann::json release_data = nlohmann::json::parse(response_data);
-                    if (release_data.contains("tag_name")) {
-                        std::cout << "  Latest Version: " << release_data["tag_name"] << "\n";
-                    }
-                } catch (const std::exception&) {
-                    // Ignore JSON parsing errors
-                }
-            } else {
-                std::cout << "  Status: ⚠️  UNHEALTHY\n";
-                std::cout << "  HTTP Status: " << response_code << "\n";
-                std::cout << "  Latency: " << duration.count() << "ms\n";
-            }
-        } else {
-            std::cout << "  Status: ❌ ERROR\n";
-            std::cout << "  Error: " << curl_easy_strerror(res) << "\n";
-            if (res == CURLE_OPERATION_TIMEDOUT) {
-                std::cout << "  Note: Request timed out after 10 seconds\n";
-            }
-        }
-    } else {
-        std::cout << "  Status: ❌ ERROR\n";
-        std::cout << "  Error: Failed to initialize HTTP client\n";
-    }
+    // Update Service (Simplified - no external dependencies)
+    std::cout << "Update Service:\n";
+    std::cout << "  Status: ℹ️  SIMPLIFIED (CURL dependency removed)\n";
+    std::cout << "  Note: Use 'git pull' to update manually\n";
     
     std::cout << "\n📋 CONFIGURATION:\n";
     std::cout << "------------------\n";
