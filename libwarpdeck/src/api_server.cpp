@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <thread>
 #include <iostream>
+#include <ctime>
 
 namespace warpdeck {
 
@@ -99,6 +100,23 @@ void APIServer::setup_routes() {
     if (!server_) {
         return;
     }
+    
+    // GET /health - Health check endpoint
+    server_->Get("/health", [this](const httplib::Request& /* req */, httplib::Response& res) {
+        try {
+            nlohmann::json health_response;
+            health_response["status"] = "healthy";
+            health_response["service"] = "WarpDeck Core Service";
+            health_response["timestamp"] = std::time(nullptr);
+            health_response["port"] = port_;
+            
+            res.set_content(health_response.dump(), "application/json");
+            res.status = 200;
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content("{\"status\":\"unhealthy\",\"error\":\"Internal server error\"}", "application/json");
+        }
+    });
     
     // GET /api/v1/info - Device information endpoint
     server_->Get("/api/v1/info", [this](const httplib::Request& /* req */, httplib::Response& res) {
