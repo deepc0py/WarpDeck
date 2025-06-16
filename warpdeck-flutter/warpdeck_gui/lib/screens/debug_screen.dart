@@ -4,6 +4,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 
 import '../services/debug_service.dart';
 import '../services/warpdeck_service.dart';
+import '../services/network_diagnostic_service.dart';
 
 final debugServiceProvider = ChangeNotifierProvider<DebugService>((ref) {
   final debugService = DebugService();
@@ -14,6 +15,10 @@ final debugServiceProvider = ChangeNotifierProvider<DebugService>((ref) {
   debugService.registerService(UpdateHealthService());
   
   return debugService;
+});
+
+final networkDiagnosticServiceProvider = ChangeNotifierProvider<NetworkDiagnosticService>((ref) {
+  return NetworkDiagnosticService();
 });
 
 class DebugScreen extends ConsumerStatefulWidget {
@@ -50,6 +55,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     // }
 
     final debugService = ref.watch(debugServiceProvider);
+    final networkDiagnosticService = ref.watch(networkDiagnosticServiceProvider);
     final connectivity = debugService.connectivityInfo;
 
     return Scaffold(
@@ -179,6 +185,33 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                       },
                       false,
                     ),
+                    _buildActionButton(
+                      'Network Diag',
+                      MdiIcons.networkOutline,
+                      networkDiagnosticService.isRunning ? null : () async {
+                        try {
+                          await networkDiagnosticService.runFullDiagnostics();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Network diagnostics completed'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Network diagnostics failed: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      networkDiagnosticService.isRunning,
+                    ),
                   ],
                 ),
               ),
@@ -258,9 +291,9 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
+                            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
                             border: Border(
-                              top: BorderSide(color: Colors.grey.shade300),
+                              top: BorderSide(color: Theme.of(context).dividerColor),
                             ),
                           ),
                           child: Column(
@@ -294,14 +327,14 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
+                                    color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.red.shade300),
+                                    border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.5)),
                                   ),
                                   child: Text(
                                     result.errorMessage!,
                                     style: TextStyle(
-                                      color: Colors.red.shade700,
+                                      color: Theme.of(context).colorScheme.onErrorContainer,
                                       fontFamily: 'monospace',
                                     ),
                                   ),
@@ -314,6 +347,85 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                   ),
                 );
               }),
+
+            const SizedBox(height: 24),
+
+            // Network Diagnostics
+            _buildSectionHeader('Network Diagnostics', MdiIcons.networkOutline),
+            if (networkDiagnosticService.lastDiagnostics.isEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      const Text('No network diagnostics available'),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        onPressed: networkDiagnosticService.isRunning ? null : () {
+                          networkDiagnosticService.runFullDiagnostics();
+                        },
+                        icon: networkDiagnosticService.isRunning 
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(MdiIcons.networkOutline),
+                        label: Text(networkDiagnosticService.isRunning 
+                            ? 'Running...' 
+                            : 'Run Network Diagnostics'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Last Run: ${DateTime.parse(networkDiagnosticService.lastDiagnostics['timestamp']).toLocal().toString().split('.')[0]}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          TextButton.icon(
+                            onPressed: () async {
+                              final report = networkDiagnosticService.generateDiagnosticReport();
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Network Diagnostic Report'),
+                                  content: SingleChildScrollView(
+                                    child: Text(
+                                      report,
+                                      style: const TextStyle(fontFamily: 'monospace'),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text('Close'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.description),
+                            label: const Text('View Report'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _buildDiagnosticSummary(networkDiagnosticService.lastDiagnostics),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -495,5 +607,97 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
     } else {
       return Colors.red;
     }
+  }
+
+  Widget _buildDiagnosticSummary(Map<String, dynamic> diagnostics) {
+    final summaryItems = <Widget>[];
+    
+    // Network interfaces summary
+    final interfaces = diagnostics['network_interfaces'] as List?;
+    if (interfaces != null) {
+      int totalAddresses = 0;
+      for (final interface in interfaces) {
+        final addresses = interface['addresses'] as List?;
+        if (addresses != null) {
+          totalAddresses += addresses.length;
+        }
+      }
+      summaryItems.add(_buildSummaryItem(
+        'Network Interfaces',
+        '${interfaces.length} interfaces, $totalAddresses addresses',
+        Icons.network_check,
+        Colors.blue,
+      ));
+    }
+    
+    // Platform-specific status
+    if (diagnostics.containsKey('avahi_status')) {
+      final avahiStatus = diagnostics['avahi_status'] as Map;
+      final daemonStatus = avahiStatus['daemon_status'] as Map?;
+      final isActive = daemonStatus?['is_active'] ?? false;
+      summaryItems.add(_buildSummaryItem(
+        'Avahi Daemon',
+        isActive ? 'Running' : 'Not running',
+        isActive ? Icons.check_circle : Icons.error,
+        isActive ? Colors.green : Colors.red,
+      ));
+    }
+    
+    if (diagnostics.containsKey('bonjour_status')) {
+      final bonjourStatus = diagnostics['bonjour_status'] as Map;
+      final mdnsResponder = bonjourStatus['mdns_responder'] as Map?;
+      final isRunning = mdnsResponder?['is_running'] ?? false;
+      summaryItems.add(_buildSummaryItem(
+        'Bonjour Service',
+        isRunning ? 'Running' : 'Not running',
+        isRunning ? Icons.check_circle : Icons.error,
+        isRunning ? Colors.green : Colors.red,
+      ));
+    }
+    
+    // Port availability
+    final portTests = diagnostics['port_tests'] as Map?;
+    if (portTests != null) {
+      int availablePorts = 0;
+      for (final entry in portTests.entries) {
+        final portInfo = entry.value as Map;
+        if (portInfo['available'] == true) {
+          availablePorts++;
+        }
+      }
+      summaryItems.add(_buildSummaryItem(
+        'Port Availability',
+        '$availablePorts/${portTests.length} ports available',
+        availablePorts > 0 ? Icons.check_circle : Icons.warning,
+        availablePorts > 0 ? Colors.green : Colors.orange,
+      ));
+    }
+    
+    return Column(
+      children: summaryItems,
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: color),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

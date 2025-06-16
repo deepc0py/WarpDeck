@@ -2,12 +2,16 @@
 
 #include "discovery_manager.h"
 #include "utils.h"
+#include "logger.h"
 #include <dns_sd.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <map>
 #include <string>
 #include <thread>
 #include <iostream>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
 
 namespace warpdeck {
 
@@ -21,6 +25,13 @@ public:
     
     bool start_discovery(const std::string& device_name, const std::string& device_id,
                         const std::string& platform, int port, const std::string& fingerprint) override {
+        LOG_DISCOVERY_INFO() << "Starting macOS discovery for device: " << device_name << " (ID: " << device_id << ")";
+        LOG_DISCOVERY_DEBUG() << "Platform: " << platform << ", Port: " << port;
+        LOG_DISCOVERY_DEBUG() << "Fingerprint: " << fingerprint.substr(0, 16) << "...";
+        
+        // Log network interface information
+        log_network_interfaces();
+        
         // Store our device ID for self-filtering
         device_id_ = device_id;
         
@@ -41,6 +52,8 @@ public:
             txt_data.insert(txt_data.end(), entry.begin(), entry.end());
         }
         
+        LOG_DISCOVERY_DEBUG() << "Registering mDNS service with " << txt_data.size() << " bytes of TXT data";
+        
         // Register service
         DNSServiceErrorType error = DNSServiceRegister(
             &service_ref_,
@@ -58,11 +71,14 @@ public:
         );
         
         if (error != kDNSServiceErr_NoError) {
-            std::cerr << "Failed to register service: " << error << std::endl;
+            LOG_DISCOVERY_ERROR() << "Failed to register mDNS service: " << error << " (" << get_dns_error_string(error) << ")";
             return false;
         }
         
+        LOG_DISCOVERY_INFO() << "Successfully registered mDNS service: " << device_name;
+        
         // Start browsing for other services
+        LOG_DISCOVERY_INFO() << "Starting mDNS browsing for _warpdeck._tcp services";
         error = DNSServiceBrowse(
             &browse_ref_,
             0,                          // flags
@@ -74,11 +90,13 @@ public:
         );
         
         if (error != kDNSServiceErr_NoError) {
-            std::cerr << "Failed to start browsing: " << error << std::endl;
+            LOG_DISCOVERY_ERROR() << "Failed to start mDNS browsing: " << error << " (" << get_dns_error_string(error) << ")";
             DNSServiceRefDeallocate(service_ref_);
             service_ref_ = nullptr;
             return false;
         }
+        
+        LOG_DISCOVERY_INFO() << "Successfully started mDNS browsing";
         
         // Start processing thread
         processing_thread_ = std::thread(&DiscoveryManagerMacOSImpl::process_events, this);
@@ -127,16 +145,22 @@ public:
 
 private:
     static void register_callback(DNSServiceRef /* service */,
-                                DNSServiceFlags /* flags */,
+                                DNSServiceFlags flags,
                                 DNSServiceErrorType errorCode,
                                 const char* name,
-                                const char* /* regtype */,
-                                const char* /* domain */,
-                                void* /* context */) {
+                                const char* regtype,
+                                const char* domain,
+                                void* context) {
+        auto* impl = static_cast<DiscoveryManagerMacOSImpl*>(context);
+        
         if (errorCode == kDNSServiceErr_NoError) {
-            std::cout << "Service registered: " << name << std::endl;
+            LOG_DISCOVERY_INFO() << "Service successfully registered: " << name;
+            LOG_DISCOVERY_DEBUG() << "Registration flags: " << flags;
+            LOG_DISCOVERY_DEBUG() << "Service type: " << (regtype ? regtype : "(null)");
+            LOG_DISCOVERY_DEBUG() << "Domain: " << (domain ? domain : "(null)");
         } else {
-            std::cerr << "Service registration failed: " << errorCode << std::endl;
+            LOG_DISCOVERY_ERROR() << "Service registration failed for " << name << ": " << errorCode 
+                                 << " (" << impl->get_dns_error_string(errorCode) << ")";
         }
     }
     
@@ -155,6 +179,10 @@ private:
         }
         
         if (flags & kDNSServiceFlagsAdd) {
+            LOG_DISCOVERY_INFO() << "Discovered new service: " << serviceName;
+            LOG_DISCOVERY_DEBUG() << "Service type: " << regtype << ", Domain: " << replyDomain;
+            LOG_DISCOVERY_DEBUG() << "Interface index: " << interfaceIndex;
+            
             // New service found, start resolving it
             DNSServiceRef resolve_ref;
             DNSServiceErrorType error = DNSServiceResolve(
@@ -170,13 +198,20 @@ private:
             
             if (error == kDNSServiceErr_NoError) {
                 impl->resolve_refs_[serviceName] = resolve_ref;
+                LOG_DISCOVERY_DEBUG() << "Started resolving service: " << serviceName;
+            } else {
+                LOG_DISCOVERY_ERROR() << "Failed to start resolving " << serviceName << ": " << error
+                                     << " (" << impl->get_dns_error_string(error) << ")";
             }
         } else {
+            LOG_DISCOVERY_INFO() << "Service removed: " << serviceName;
+            
             // Service removed
             auto it = impl->resolve_refs_.find(serviceName);
             if (it != impl->resolve_refs_.end()) {
                 DNSServiceRefDeallocate(it->second);
                 impl->resolve_refs_.erase(it);
+                LOG_DISCOVERY_DEBUG() << "Cleaned up resolver for: " << serviceName;
             }
             
             // Notify about peer loss
@@ -197,14 +232,19 @@ private:
                                const unsigned char* txtRecord,
                                void* context) {
         if (!context) {
-            std::cerr << "Null context in resolve_callback" << std::endl;
+            LOG_DISCOVERY_ERROR() << "Null context in resolve_callback";
             return;
         }
         auto* impl = static_cast<DiscoveryManagerMacOSImpl*>(context);
         
         if (errorCode != kDNSServiceErr_NoError) {
+            LOG_DISCOVERY_ERROR() << "Service resolution failed: " << errorCode
+                                 << " (" << impl->get_dns_error_string(errorCode) << ")";
             return;
         }
+        
+        LOG_DISCOVERY_DEBUG() << "Resolving service, host: " << hosttarget
+                             << ", TXT length: " << txtLen;
         
         // Parse TXT record
         std::map<std::string, std::string> txt_data;
@@ -259,9 +299,13 @@ private:
         
         // Skip if this is our own device (self-filtering)
         if (peer.id == impl->device_id_) {
-            std::cout << "Skipping self-discovery: " << peer.id << std::endl;
+            LOG_DISCOVERY_DEBUG() << "Skipping self-discovery for device: " << peer.id;
             return;
         }
+        
+        LOG_DISCOVERY_INFO() << "Successfully resolved peer: " << peer.name 
+                            << " (" << peer.id << ") at " << peer.host_address 
+                            << ":" << peer.port << " [" << peer.platform << "]";
         
         // Add to discovered peers
         {
@@ -333,6 +377,60 @@ private:
     std::thread processing_thread_;
     std::atomic<bool> running_{true};
     std::string device_id_;
+    
+    void log_network_interfaces() {
+        struct ifaddrs *ifap, *ifa;
+        if (getifaddrs(&ifap) == 0) {
+            LOG_DISCOVERY_DEBUG() << "Available network interfaces:";
+            for (ifa = ifap; ifa != nullptr; ifa = ifa->ifa_next) {
+                if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+                    struct sockaddr_in* addr_in = (struct sockaddr_in*)ifa->ifa_addr;
+                    char addr_str[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &addr_in->sin_addr, addr_str, INET_ADDRSTRLEN);
+                    LOG_DISCOVERY_DEBUG() << "  " << ifa->ifa_name << ": " << addr_str;
+                }
+            }
+            freeifaddrs(ifap);
+        }
+    }
+    
+    const char* get_dns_error_string(DNSServiceErrorType error) {
+        switch (error) {
+            case kDNSServiceErr_NoError: return "No error";
+            case kDNSServiceErr_Unknown: return "Unknown error";
+            case kDNSServiceErr_NoSuchName: return "No such name";
+            case kDNSServiceErr_NoMemory: return "No memory";
+            case kDNSServiceErr_BadParam: return "Bad parameter";
+            case kDNSServiceErr_BadReference: return "Bad reference";
+            case kDNSServiceErr_BadState: return "Bad state";
+            case kDNSServiceErr_BadFlags: return "Bad flags";
+            case kDNSServiceErr_Unsupported: return "Unsupported";
+            case kDNSServiceErr_NotInitialized: return "Not initialized";
+            case kDNSServiceErr_AlreadyRegistered: return "Already registered";
+            case kDNSServiceErr_NameConflict: return "Name conflict";
+            case kDNSServiceErr_Invalid: return "Invalid";
+            case kDNSServiceErr_Firewall: return "Firewall blocking";
+            case kDNSServiceErr_Incompatible: return "Incompatible";
+            case kDNSServiceErr_BadInterfaceIndex: return "Bad interface index";
+            case kDNSServiceErr_Refused: return "Refused";
+            case kDNSServiceErr_NoSuchRecord: return "No such record";
+            case kDNSServiceErr_NoAuth: return "No authentication";
+            case kDNSServiceErr_NoSuchKey: return "No such key";
+            case kDNSServiceErr_NATTraversal: return "NAT traversal";
+            case kDNSServiceErr_DoubleNAT: return "Double NAT";
+            case kDNSServiceErr_BadTime: return "Bad time";
+            case kDNSServiceErr_BadSig: return "Bad signature";
+            case kDNSServiceErr_BadKey: return "Bad key";
+            case kDNSServiceErr_Transient: return "Transient error";
+            case kDNSServiceErr_ServiceNotRunning: return "Service not running";
+            case kDNSServiceErr_NATPortMappingUnsupported: return "NAT port mapping unsupported";
+            case kDNSServiceErr_NATPortMappingDisabled: return "NAT port mapping disabled";
+            case kDNSServiceErr_NoRouter: return "No router";
+            case kDNSServiceErr_PollingMode: return "Polling mode";
+            case kDNSServiceErr_Timeout: return "Timeout";
+            default: return "Unknown error code";
+        }
+    }
 };
 
 
