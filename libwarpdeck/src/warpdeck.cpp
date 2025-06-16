@@ -5,6 +5,7 @@
 #include "security_manager.h"
 #include "transfer_manager.h"
 #include "utils.h"
+#include "logger.h"
 #include <memory>
 #include <string>
 #include <cstring>
@@ -83,14 +84,14 @@ WarpDeckHandle* warpdeck_create(const Callbacks* callbacks, const char* config_d
         // Set up discovery manager callbacks
         handle->discovery_manager->set_peer_discovered_callback(
             [handle = handle.get()](const PeerInfo& peer) {
-                std::cout << "Peer discovered: " << peer.name << std::endl;
+                LOG_CORE_INFO() << "Peer discovered: " << peer.name << " (ID: " << peer.id << ")";
                 std::string json = utils::peer_info_to_json(peer);
                 safe_call_callback(handle->callbacks.on_peer_discovered, json.c_str());
             });
             
         handle->discovery_manager->set_peer_lost_callback(
             [handle = handle.get()](const std::string& device_id) {
-                std::cout << "Peer lost: " << device_id << std::endl;
+                LOG_CORE_INFO() << "Peer lost: " << device_id;
                 safe_call_callback(handle->callbacks.on_peer_lost, device_id.c_str());
             });
         
@@ -189,27 +190,28 @@ int warpdeck_start(WarpDeckHandle* handle, const char* device_name, int desired_
         device_info.platform = utils::get_platform_name();
         device_info.protocol_version = "1.0";
         
-        std::cout << "Starting API server on port " << desired_port << "..." << std::endl;
+        LOG_CORE_INFO() << "Starting API server on port " << desired_port;
         if (!handle->api_server->start(desired_port, device_info)) {
-            std::cerr << "API server start returned false" << std::endl;
+            LOG_CORE_ERROR() << "API server failed to start on port " << desired_port;
             return -1;
         }
         
         handle->current_port = handle->api_server->get_port();
-        std::cout << "API server started, current_port = " << handle->current_port << std::endl;
+        LOG_CORE_INFO() << "API server started successfully on port " << handle->current_port;
         
         // Start discovery manager
-        std::cout << "Getting certificate fingerprint..." << std::endl;
+        LOG_CORE_DEBUG() << "Getting certificate fingerprint for discovery";
         std::string fingerprint = handle->security_manager->get_certificate_fingerprint();
-        std::cout << "Got fingerprint: " << fingerprint.substr(0, 16) << "..." << std::endl;
-        std::cout << "Starting discovery manager..." << std::endl;
+        LOG_CORE_DEBUG() << "Certificate fingerprint: " << fingerprint.substr(0, 16) << "...";
+        
+        LOG_CORE_INFO() << "Starting discovery manager for device: " << device_name;
         if (!handle->discovery_manager->start(device_name, handle->device_id, 
                                             device_info.platform, handle->current_port, fingerprint)) {
-            std::cerr << "Discovery manager start failed" << std::endl;
+            LOG_CORE_ERROR() << "Discovery manager failed to start";
             handle->api_server->stop();
             return -1;
         }
-        std::cout << "Discovery manager started successfully" << std::endl;
+        LOG_CORE_INFO() << "Discovery manager started successfully";
         
         handle->started = true;
         return handle->current_port;

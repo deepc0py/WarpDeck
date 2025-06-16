@@ -61,6 +61,7 @@ set(WARPDECK_SOURCES
     src/security_manager.cpp
     src/transfer_manager.cpp
     src/utils.cpp
+    src/logger.cpp
 )
 
 # Platform-specific source files
