@@ -18,6 +18,14 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Cache system dependencies
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -33,6 +41,16 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.VCPKG_ROOT }}
+          ~/.cache/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install dependencies with vcpkg
       run: |
@@ -64,6 +82,14 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Cache system dependencies
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -78,6 +104,16 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.VCPKG_ROOT }}
+          ~/.cache/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install dependencies with vcpkg
       run: |
@@ -123,6 +159,15 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Cache system dependencies
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt
+        key: ${{ runner.os }}-apt-flutter-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-flutter-
+          ${{ runner.os }}-apt-
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -143,10 +188,31 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
 
+    - name: Cache Flutter
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          ${{ env.FLUTTER_HOME }}/.pub-cache
+        key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-
+          ${{ runner.os }}-flutter-
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.VCPKG_ROOT }}
+          ~/.cache/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install dependencies with vcpkg
       run: |
@@ -191,6 +257,15 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Cache system dependencies
+      uses: actions/cache@v4
+      with:
+        path: /var/cache/apt
+        key: ${{ runner.os }}-apt-quick-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-quick-
+          ${{ runner.os }}-apt-
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -211,10 +286,31 @@ jobs:
         flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
 
+    - name: Cache Flutter
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+          ${{ env.FLUTTER_HOME }}/.pub-cache
+        key: ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-${{ hashFiles('**/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-${{ env.FLUTTER_VERSION }}-
+          ${{ runner.os }}-flutter-
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
         vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.VCPKG_ROOT }}
+          ~/.cache/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/build.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
 
     - name: Install dependencies with vcpkg
       run: |
