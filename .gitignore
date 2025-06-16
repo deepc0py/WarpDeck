@@ -3,6 +3,10 @@ build/
 */build/
 **/build/
 
+
+.claude/settings.local.json
+
+
 # CMake files
 CMakeCache.txt
 CMakeFiles/
