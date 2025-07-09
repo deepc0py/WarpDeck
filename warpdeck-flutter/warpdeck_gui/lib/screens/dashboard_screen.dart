@@ -159,6 +159,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   onTap: warpDeckState.status == WarpDeckStatus.initialized
                       ? () => ref.read(warpDeckServiceProvider.notifier).start()
                       : null,
+                  isLoading: warpDeckState.status == WarpDeckStatus.starting,
                 ),
               ),
               const SizedBox(width: 16),
@@ -290,6 +291,7 @@ class _QuickActionCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback? onTap;
+  final bool isLoading;
 
   const _QuickActionCard({
     required this.title,
@@ -297,13 +299,14 @@ class _QuickActionCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.onTap,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
-        onTap: onTap,
+        onTap: isLoading ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -315,10 +318,19 @@ class _QuickActionCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(icon, color: color, size: 24),
+                    child: isLoading 
+                        ? SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(color),
+                            ),
+                          )
+                        : Icon(icon, color: color, size: 24),
                   ),
                   const Spacer(),
                   if (onTap != null)

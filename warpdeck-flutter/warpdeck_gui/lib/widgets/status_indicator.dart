@@ -18,10 +18,10 @@ class StatusIndicator extends StatelessWidget {
     final statusWidget = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _getStatusColor().withOpacity(0.1),
+        color: _getStatusColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _getStatusColor().withOpacity(0.3),
+          color: _getStatusColor().withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -44,7 +44,17 @@ class StatusIndicator extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (status == WarpDeckStatus.error && errorMessage != null) ...[
+          if (status == WarpDeckStatus.starting) ...[
+            const SizedBox(width: 4),
+            SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor()),
+              ),
+            ),
+          ] else if (status == WarpDeckStatus.error && errorMessage != null) ...[
             const SizedBox(width: 4),
             Icon(
               MdiIcons.informationOutline,
@@ -96,6 +106,8 @@ class StatusIndicator extends StatelessWidget {
         return Colors.grey;
       case WarpDeckStatus.initialized:
         return Colors.orange;
+      case WarpDeckStatus.starting:
+        return Colors.blue;
       case WarpDeckStatus.running:
         return Colors.green;
       case WarpDeckStatus.error:
@@ -109,6 +121,8 @@ class StatusIndicator extends StatelessWidget {
         return 'Not Started';
       case WarpDeckStatus.initialized:
         return 'Ready';
+      case WarpDeckStatus.starting:
+        return 'Starting...';
       case WarpDeckStatus.running:
         return 'Running';
       case WarpDeckStatus.error:

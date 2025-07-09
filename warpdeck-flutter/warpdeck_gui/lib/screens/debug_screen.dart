@@ -146,7 +146,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                       () async {
                         try {
                           await debugService.copyLogsToClipboard();
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Debug logs copied to clipboard'),
@@ -155,7 +155,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                             );
                           }
                         } catch (e) {
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to copy logs: $e'),
@@ -173,7 +173,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                       () async {
                         try {
                           await debugService.clearAppCache();
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('App cache cleared'),
@@ -182,7 +182,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                             );
                           }
                         } catch (e) {
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to clear cache: $e'),
@@ -200,7 +200,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                       networkDiagnosticService.isRunning ? null : () async {
                         try {
                           await networkDiagnosticService.runFullDiagnostics();
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Network diagnostics completed'),
@@ -209,7 +209,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                             );
                           }
                         } catch (e) {
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Network diagnostics failed: $e'),
@@ -227,7 +227,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                       () async {
                         try {
                           await warpdeckService.restart();
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Service restarted successfully'),
@@ -236,7 +236,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                             );
                           }
                         } catch (e) {
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to restart service: $e'),
@@ -284,10 +284,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: _getStatusCodeColor(result!.statusCode!).withOpacity(0.1),
+                                  color: _getStatusCodeColor(result!.statusCode!).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _getStatusCodeColor(result.statusCode!).withOpacity(0.3),
+                                    color: _getStatusCodeColor(result.statusCode!).withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Text(
@@ -327,7 +327,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                             border: Border(
                               top: BorderSide(color: Theme.of(context).dividerColor),
                             ),
@@ -363,9 +363,9 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.2),
+                                    color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.5)),
+                                    border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5)),
                                   ),
                                   child: Text(
                                     result.errorMessage!,
@@ -773,7 +773,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
   }
 
   Widget _buildDiagnosticDetails(Map<String, dynamic> diagnostics) {
-    final jsonEncoder = const JsonEncoder.withIndent('  ');
+    const jsonEncoder = JsonEncoder.withIndent('  ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

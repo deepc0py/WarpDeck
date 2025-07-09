@@ -103,14 +103,40 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
     if (_handle == nullptr) return false;
 
     try {
+      // Set status to starting to show progress
+      state = state.copyWith(
+        status: WarpDeckStatus.starting,
+        errorMessage: null,
+      );
+
       final deviceNamePtr = _deviceName.toNativeUtf8();
-      final resultPort = WarpDeckFFI.instance.warpdeckStart(_handle!, deviceNamePtr, port);
+      
+      // Wrap the FFI call with a timeout to prevent indefinite hanging
+      final result = await Future.microtask(() {
+        try {
+          return WarpDeckFFI.instance.warpdeckStart(_handle!, deviceNamePtr, port);
+        } catch (e) {
+          return -1;
+        }
+      }).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          return -2; // Special code for timeout
+        },
+      );
+      
       calloc.free(deviceNamePtr);
 
-      if (resultPort < 0) {
+      if (result == -2) {
         state = state.copyWith(
           status: WarpDeckStatus.error,
-          errorMessage: 'Failed to start WarpDeck on port $port',
+          errorMessage: 'WarpDeck start operation timed out (10s). Check firewall/network settings.',
+        );
+        return false;
+      } else if (result < 0) {
+        state = state.copyWith(
+          status: WarpDeckStatus.error,
+          errorMessage: 'Failed to start WarpDeck on port $port (code: $result)',
         );
         return false;
       }
@@ -118,7 +144,8 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
       _isStarted = true;
       state = state.copyWith(
         status: WarpDeckStatus.running,
-        currentPort: resultPort,
+        currentPort: result,
+        errorMessage: null,
       );
       
       return true;
@@ -362,6 +389,7 @@ class WarpDeckService extends StateNotifier<WarpDeckState> {
 enum WarpDeckStatus {
   uninitialized,
   initialized,
+  starting,
   running,
   error,
 }
