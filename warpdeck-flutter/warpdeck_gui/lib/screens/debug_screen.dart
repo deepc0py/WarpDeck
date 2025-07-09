@@ -284,10 +284,10 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: _getStatusCodeColor(result!.statusCode!).withValues(alpha: 0.1),
+                                  color: _getStatusCodeColor(result!.statusCode!).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _getStatusCodeColor(result.statusCode!).withValues(alpha: 0.3),
+                                    color: _getStatusCodeColor(result.statusCode!).withOpacity(0.3),
                                   ),
                                 ),
                                 child: Text(
