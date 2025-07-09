@@ -90,12 +90,12 @@ class WarpDeckFFI {
         // Try multiple paths for the dylib
         final executableDir = path.dirname(Platform.resolvedExecutable);
         final possiblePaths = [
-          // Current working directory (Flutter project root)
-          'libwarpdeck.dylib',
           // Bundled with app in same directory as executable
           path.join(executableDir, 'libwarpdeck.dylib'),
           // Development path from Flutter project
           '../../../libwarpdeck/build/libwarpdeck.dylib',
+          // Bundled with app (relative)
+          'libwarpdeck.dylib',
           // Absolute development path
           '/Users/jesse/code/WarpDeck/libwarpdeck/build/libwarpdeck.dylib',
           // macOS app bundle Frameworks directory
@@ -104,19 +104,11 @@ class WarpDeckFFI {
         
         DynamicLibrary? lib;
         
-        // Debug info for library loading (can be commented out for production)
-        // print('🔍 Platform.resolvedExecutable: ${Platform.resolvedExecutable}');
-        // print('🔍 executableDir: $executableDir');
-        // print('🔍 Current working directory: ${Directory.current.path}');
-        
         for (final path in possiblePaths) {
           try {
             lib = DynamicLibrary.open(path);
-            print('✅ Successfully loaded libwarpdeck.dylib from: $path');
             break;
           } catch (e) {
-            // Only show detailed errors if debugging is needed
-            // print('❌ Failed to load from $path: $e');
             continue;
           }
         }
@@ -179,16 +171,19 @@ class WarpDeckFFI {
 
   void _bindFunctions() {
     try {
-      warpdeckCreate = _lib.lookupFunction<WarpDeckCreateNative, WarpDeckCreateDart>('warpdeck_create');
-      warpdeckStart = _lib.lookupFunction<WarpDeckStartNative, WarpDeckStartDart>('warpdeck_start');
-      warpdeckStop = _lib.lookupFunction<WarpDeckStopNative, WarpDeckStopDart>('warpdeck_stop');
-      warpdeckDestroy = _lib.lookupFunction<WarpDeckDestroyNative, WarpDeckDestroyDart>('warpdeck_destroy');
-      warpdeckInitiateTransfer = _lib.lookupFunction<WarpDeckInitiateTransferNative, WarpDeckInitiateTransferDart>('warpdeck_initiate_transfer');
-      warpdeckRespondToTransfer = _lib.lookupFunction<WarpDeckRespondToTransferNative, WarpDeckRespondToTransferDart>('warpdeck_respond_to_transfer');
-      warpdeckGetDiscoveryStatus = _lib.lookupFunction<WarpDeckGetDiscoveryStatusNative, WarpDeckGetDiscoveryStatusDart>('warpdeck_get_discovery_status');
-      warpdeckGetDiscoveredPeers = _lib.lookupFunction<WarpDeckGetDiscoveredPeersNative, WarpDeckGetDiscoveredPeersDart>('warpdeck_get_discovered_peers');
-      warpdeckGetMdnsDebugInfo = _lib.lookupFunction<WarpDeckGetMdnsDebugInfoNative, WarpDeckGetMdnsDebugInfoDart>('warpdeck_get_mdns_debug_info');
-      warpdeckFreeString = _lib.lookupFunction<WarpDeckFreeStringNative, WarpDeckFreeStringDart>('warpdeck_free_string');
+      // On macOS, C functions are prefixed with underscore, on Linux they are not
+      final prefix = Platform.isMacOS ? '_' : '';
+      
+      warpdeckCreate = _lib.lookupFunction<WarpDeckCreateNative, WarpDeckCreateDart>('${prefix}warpdeck_create');
+      warpdeckStart = _lib.lookupFunction<WarpDeckStartNative, WarpDeckStartDart>('${prefix}warpdeck_start');
+      warpdeckStop = _lib.lookupFunction<WarpDeckStopNative, WarpDeckStopDart>('${prefix}warpdeck_stop');
+      warpdeckDestroy = _lib.lookupFunction<WarpDeckDestroyNative, WarpDeckDestroyDart>('${prefix}warpdeck_destroy');
+      warpdeckInitiateTransfer = _lib.lookupFunction<WarpDeckInitiateTransferNative, WarpDeckInitiateTransferDart>('${prefix}warpdeck_initiate_transfer');
+      warpdeckRespondToTransfer = _lib.lookupFunction<WarpDeckRespondToTransferNative, WarpDeckRespondToTransferDart>('${prefix}warpdeck_respond_to_transfer');
+      warpdeckGetDiscoveryStatus = _lib.lookupFunction<WarpDeckGetDiscoveryStatusNative, WarpDeckGetDiscoveryStatusDart>('${prefix}warpdeck_get_discovery_status');
+      warpdeckGetDiscoveredPeers = _lib.lookupFunction<WarpDeckGetDiscoveredPeersNative, WarpDeckGetDiscoveredPeersDart>('${prefix}warpdeck_get_discovered_peers');
+      warpdeckGetMdnsDebugInfo = _lib.lookupFunction<WarpDeckGetMdnsDebugInfoNative, WarpDeckGetMdnsDebugInfoDart>('${prefix}warpdeck_get_mdns_debug_info');
+      warpdeckFreeString = _lib.lookupFunction<WarpDeckFreeStringNative, WarpDeckFreeStringDart>('${prefix}warpdeck_free_string');
     } catch (e) {
       rethrow;
     }
