@@ -327,7 +327,7 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
                             border: Border(
                               top: BorderSide(color: Theme.of(context).dividerColor),
                             ),
@@ -363,9 +363,9 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.2),
+                                    color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5)),
+                                    border: Border.all(color: Theme.of(context).colorScheme.error.withOpacity(0.5)),
                                   ),
                                   child: Text(
                                     result.errorMessage!,
