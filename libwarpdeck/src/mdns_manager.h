@@ -105,6 +105,7 @@ private:
                           const void* buffer, size_t size);
     void send_service_response(int sock, const struct sockaddr* to, size_t addrlen,
                               const std::string& query_name, uint16_t query_type);
+    void send_service_announcement();
     
     // Discovery implementation
     void send_discovery_query();
@@ -116,6 +117,7 @@ private:
     std::string get_local_hostname() const;
     std::vector<std::string> get_local_addresses() const;
     static std::string sockaddr_to_string(const struct sockaddr* addr);
+    std::string get_platform_name() const;
     
     // mDNS callback helpers
     static int query_callback(int sock, const struct sockaddr* from, size_t addrlen,

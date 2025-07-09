@@ -7,6 +7,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>
 
 #ifdef _WIN32
 #include <iphlpapi.h>
@@ -26,7 +27,7 @@ MdnsManager::MdnsManager()
     : should_stop_(false)
     , is_publishing_(false)
     , is_discovering_(false) {
-    Logger::instance().instance().info("MdnsManager", "MdnsManager initialized");
+    Logger::instance().info("MdnsManager", "MdnsManager initialized");
 }
 
 MdnsManager::~MdnsManager() {
@@ -40,14 +41,14 @@ MdnsManager::~MdnsManager() {
     }
     
     cleanup_sockets();
-    Logger::instance().instance().info("MdnsManager", "MdnsManager destroyed");
+    Logger::instance().info("MdnsManager", "MdnsManager destroyed");
 }
 
 bool MdnsManager::publish_service(const std::string& device_id, const std::string& fingerprint, int port) {
     std::lock_guard<std::mutex> lock(service_mutex_);
     
     if (is_publishing_.load()) {
-        Logger::instance().instance().warn("MdnsManager", "Service already being published");
+        Logger::instance().warn("MdnsManager", "Service already being published");
         return false;
     }
     
@@ -56,7 +57,7 @@ bool MdnsManager::publish_service(const std::string& device_id, const std::strin
     service_info_.port = port;
     
     if (!initialize_sockets()) {
-        Logger::instance().instance().error("MdnsManager", "Failed to initialize sockets for publishing");
+        Logger::instance().error("MdnsManager", "Failed to initialize sockets for publishing");
         return false;
     }
     
@@ -69,7 +70,10 @@ bool MdnsManager::publish_service(const std::string& device_id, const std::strin
     is_publishing_ = true;
     thread_cv_.notify_all();
     
-    Logger::instance().instance().info("MdnsManager", "Started publishing service for device: " + device_id);
+    // Send initial announcement
+    send_service_announcement();
+    
+    Logger::instance().info("MdnsManager", "Started publishing service for device: " + device_id);
     return true;
 }
 
@@ -255,10 +259,12 @@ std::string MdnsManager::get_debug_info() const {
 void MdnsManager::network_thread_main() {
     Logger::instance().info("MdnsManager", "mDNS network thread started");
     
-    const auto query_interval = std::chrono::seconds(5);
+    const auto query_interval = std::chrono::seconds(3);  // More frequent queries
     const auto timeout_check_interval = std::chrono::seconds(10);
+    const auto announcement_interval = std::chrono::seconds(30);  // Regular announcements
     auto last_query_time = std::chrono::steady_clock::now();
     auto last_timeout_check = std::chrono::steady_clock::now();
+    auto last_announcement_time = std::chrono::steady_clock::now();
     
     while (!should_stop_.load()) {
         auto now = std::chrono::steady_clock::now();
@@ -267,6 +273,12 @@ void MdnsManager::network_thread_main() {
         if (is_discovering_.load() && (now - last_query_time) >= query_interval) {
             send_discovery_query();
             last_query_time = now;
+        }
+        
+        // Send service announcements periodically
+        if (is_publishing_.load() && (now - last_announcement_time) >= announcement_interval) {
+            send_service_announcement();
+            last_announcement_time = now;
         }
         
         // Check for peer timeouts
@@ -293,18 +305,24 @@ void MdnsManager::network_thread_main() {
                         struct sockaddr_storage from_addr;
                         socklen_t from_len = sizeof(from_addr);
                         
-                        ssize_t bytes = recvfrom(sock, buffer, sizeof(buffer), 0,
-                                               (struct sockaddr*)&from_addr, &from_len);
-                        
-                        if (bytes > 0) {
-                            if (is_publishing_.load()) {
-                                handle_mdns_query(sock, (struct sockaddr*)&from_addr, from_len,
-                                                 buffer, static_cast<size_t>(bytes));
+                        // Use proper mDNS library functions
+                        if (is_publishing_.load()) {
+                            // Listen for incoming queries
+                            size_t records = mdns_socket_listen(sock, buffer, sizeof(buffer),
+                                                              query_callback, this);
+                            if (records > 0) {
+                                Logger::instance().debug("MdnsManager", "Processed " + std::to_string(records) + 
+                                                       " mDNS queries on socket " + std::to_string(sock));
                             }
-                            
-                            if (is_discovering_.load()) {
-                                handle_mdns_response(buffer, static_cast<size_t>(bytes),
-                                                   (struct sockaddr*)&from_addr, from_len);
+                        }
+                        
+                        if (is_discovering_.load()) {
+                            // Receive discovery responses
+                            size_t records = mdns_query_recv(sock, buffer, sizeof(buffer),
+                                                           query_callback, this, 0);
+                            if (records > 0) {
+                                Logger::instance().debug("MdnsManager", "Processed " + std::to_string(records) + 
+                                                       " mDNS responses on socket " + std::to_string(sock));
                             }
                         }
                     }
@@ -336,7 +354,13 @@ bool MdnsManager::initialize_sockets() {
 #endif
     
     // Create IPv4 socket
-    int ipv4_sock = mdns_socket_open_ipv4(nullptr);
+    struct sockaddr_in service_addr_ipv4;
+    memset(&service_addr_ipv4, 0, sizeof(service_addr_ipv4));
+    service_addr_ipv4.sin_family = AF_INET;
+    service_addr_ipv4.sin_addr.s_addr = INADDR_ANY;
+    service_addr_ipv4.sin_port = htons(MDNS_PORT);
+    
+    int ipv4_sock = mdns_socket_open_ipv4(&service_addr_ipv4);
     if (ipv4_sock >= 0) {
         sockets_.push_back(ipv4_sock);
         Logger::instance().debug("MdnsManager", "Opened IPv4 mDNS socket: " + std::to_string(ipv4_sock));
@@ -345,7 +369,13 @@ bool MdnsManager::initialize_sockets() {
     }
     
     // Create IPv6 socket
-    int ipv6_sock = mdns_socket_open_ipv6(nullptr);
+    struct sockaddr_in6 service_addr_ipv6;
+    memset(&service_addr_ipv6, 0, sizeof(service_addr_ipv6));
+    service_addr_ipv6.sin6_family = AF_INET6;
+    service_addr_ipv6.sin6_addr = in6addr_any;
+    service_addr_ipv6.sin6_port = htons(MDNS_PORT);
+    
+    int ipv6_sock = mdns_socket_open_ipv6(&service_addr_ipv6);
     if (ipv6_sock >= 0) {
         sockets_.push_back(ipv6_sock);
         Logger::instance().debug("MdnsManager", "Opened IPv6 mDNS socket: " + std::to_string(ipv6_sock));
@@ -487,11 +517,28 @@ void MdnsManager::send_discovery_query() {
     for (int sock : sockets_) {
         const char* service_name = "_warpdeck._tcp.local.";
         char buffer[256];
-        mdns_query_send(sock, MDNS_RECORDTYPE_PTR, service_name, strlen(service_name), 
-                       buffer, sizeof(buffer), 0);
+        
+        // Send PTR query to discover instances
+        int query_id = mdns_query_send(sock, MDNS_RECORDTYPE_PTR, service_name, strlen(service_name), 
+                                      buffer, sizeof(buffer), 0);
+        
+        if (query_id > 0) {
+            Logger::instance().debug("MdnsManager", "Sent PTR discovery query on socket " + 
+                                   std::to_string(sock) + " with ID " + std::to_string(query_id));
+        } else {
+            Logger::instance().warn("MdnsManager", "Failed to send discovery query on socket " + 
+                                  std::to_string(sock));
+        }
+        
+        // Also send ANY query for more comprehensive discovery
+        query_id = mdns_query_send(sock, MDNS_RECORDTYPE_ANY, service_name, strlen(service_name),
+                                  buffer, sizeof(buffer), 0);
+        
+        if (query_id > 0) {
+            Logger::instance().debug("MdnsManager", "Sent ANY discovery query on socket " + 
+                                   std::to_string(sock) + " with ID " + std::to_string(query_id));
+        }
     }
-    
-    Logger::instance().debug("MdnsManager", "Sent discovery query for _warpdeck._tcp.local.");
 }
 
 void MdnsManager::handle_mdns_response(const void* buffer, size_t size,
@@ -794,6 +841,113 @@ int MdnsManager::query_callback(int sock, const struct sockaddr* from, size_t ad
     }
     
     return 0;
+}
+
+void MdnsManager::send_service_announcement() {
+    std::lock_guard<std::mutex> service_lock(service_mutex_);
+    std::lock_guard<std::mutex> socket_lock(sockets_mutex_);
+    
+    if (!is_publishing_.load()) {
+        return;
+    }
+    
+    char buffer[2048];
+    std::string hostname = get_local_hostname();
+    std::string service_instance = service_info_.device_id + "._warpdeck._tcp.local.";
+    std::string service_type = "_warpdeck._tcp.local.";
+    std::string target_host = hostname + ".local.";
+    
+    // Create TXT record data with proper formatting
+    std::vector<std::string> txt_entries;
+    txt_entries.push_back("deviceid=" + service_info_.device_id);
+    txt_entries.push_back("fingerprint=" + service_info_.fingerprint);
+    txt_entries.push_back("name=" + service_info_.device_id);
+    txt_entries.push_back("platform=" + get_platform_name());
+    
+    // Prepare the announcement records
+    mdns_record_t answer_records[4];
+    size_t answer_count = 0;
+    
+    // PTR record
+    answer_records[answer_count].name.str = service_type.c_str();
+    answer_records[answer_count].name.length = service_type.length();
+    answer_records[answer_count].type = MDNS_RECORDTYPE_PTR;
+    answer_records[answer_count].rclass = 0;
+    answer_records[answer_count].ttl = 120;  // 2 minutes TTL
+    answer_records[answer_count].data.ptr.name.str = service_instance.c_str();
+    answer_records[answer_count].data.ptr.name.length = service_instance.length();
+    answer_count++;
+    
+    // SRV record
+    answer_records[answer_count].name.str = service_instance.c_str();
+    answer_records[answer_count].name.length = service_instance.length();
+    answer_records[answer_count].type = MDNS_RECORDTYPE_SRV;
+    answer_records[answer_count].rclass = 0;
+    answer_records[answer_count].ttl = 120;
+    answer_records[answer_count].data.srv.priority = 0;
+    answer_records[answer_count].data.srv.weight = 0;
+    answer_records[answer_count].data.srv.port = service_info_.port;
+    answer_records[answer_count].data.srv.name.str = target_host.c_str();
+    answer_records[answer_count].data.srv.name.length = target_host.length();
+    answer_count++;
+    
+    // TXT record - we'll use the first entry for simplicity
+    answer_records[answer_count].name.str = service_instance.c_str();
+    answer_records[answer_count].name.length = service_instance.length();
+    answer_records[answer_count].type = MDNS_RECORDTYPE_TXT;
+    answer_records[answer_count].rclass = 0;
+    answer_records[answer_count].ttl = 120;
+    answer_records[answer_count].data.txt.key.str = "deviceid";
+    answer_records[answer_count].data.txt.key.length = 8;
+    answer_records[answer_count].data.txt.value.str = service_info_.device_id.c_str();
+    answer_records[answer_count].data.txt.value.length = service_info_.device_id.length();
+    answer_count++;
+    
+    // A record for IPv4 addresses
+    std::vector<std::string> addresses = get_local_addresses();
+    for (const auto& addr : addresses) {
+        if (answer_count >= 4) break;
+        
+        struct sockaddr_in addr_in;
+        memset(&addr_in, 0, sizeof(addr_in));
+        if (inet_pton(AF_INET, addr.c_str(), &addr_in.sin_addr) == 1) {
+            answer_records[answer_count].name.str = target_host.c_str();
+            answer_records[answer_count].name.length = target_host.length();
+            answer_records[answer_count].type = MDNS_RECORDTYPE_A;
+            answer_records[answer_count].rclass = 0;
+            answer_records[answer_count].ttl = 120;
+            answer_records[answer_count].data.a.addr = addr_in;
+            answer_count++;
+            break;
+        }
+    }
+    
+    // Send announcement on all sockets
+    for (int sock : sockets_) {
+        int result = mdns_announce_multicast(sock, buffer, sizeof(buffer), 
+                                           answer_records[0], nullptr, 0, 
+                                           answer_records + 1, answer_count - 1);
+        
+        if (result < 0) {
+            Logger::instance().warn("MdnsManager", "Failed to send announcement on socket " + 
+                                  std::to_string(sock) + ": " + std::to_string(result));
+        } else {
+            Logger::instance().debug("MdnsManager", "Sent service announcement on socket " + 
+                                   std::to_string(sock));
+        }
+    }
+}
+
+std::string MdnsManager::get_platform_name() const {
+#ifdef _WIN32
+    return "windows";
+#elif __APPLE__
+    return "macos";
+#elif __linux__
+    return "linux";
+#else
+    return "unknown";
+#endif
 }
 
 void MdnsManager::send_service_response(int sock, const struct sockaddr* to, size_t addrlen,
