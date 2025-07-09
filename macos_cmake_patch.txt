@@ -1,0 +1,39 @@
+# Suggested improvements for libwarpdeck/CMakeLists.txt for macOS
+
+# Add this after the platform detection section (around line 37):
+
+# macOS-specific optimizations
+if(WARPDECK_PLATFORM_MACOS)
+    # Prefer Homebrew packages over FetchContent when available
+    set(CMAKE_PREFIX_PATH "/opt/homebrew" ${CMAKE_PREFIX_PATH})
+    
+    # Try to find nlohmann_json via Homebrew first
+    find_package(nlohmann_json QUIET)
+    if(nlohmann_json_FOUND)
+        message(STATUS "Using system nlohmann_json")
+        set(USE_SYSTEM_NLOHMANN_JSON ON)
+    else()
+        set(USE_SYSTEM_NLOHMANN_JSON OFF)
+    endif()
+    
+    # macOS-specific compiler flags
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
+
+# Then modify the nlohmann_json section to:
+
+if(USE_SYSTEM_NLOHMANN_JSON)
+    # Use system nlohmann_json (e.g., from Homebrew)
+    message(STATUS "Using system nlohmann_json")
+else()
+    # Fetch nlohmann/json for JSON handling
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
+endif()
+
+# This would make the build prefer Homebrew packages when available
+# but fall back to FetchContent if not found

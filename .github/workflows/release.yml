@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 env:
-  FLUTTER_VERSION: '3.22.2'
+  FLUTTER_VERSION: '3.24.0'
   CMAKE_VERSION: '3.15'
 
 jobs:
@@ -385,6 +385,10 @@ jobs:
           "$BUILD_DIR/libwarpdeck.so"
           "$BUILD_DIR/libwarpdeck_shared.so"
         )
+        
+        # Debug: List all files in build directory
+        echo "🔍 All files in build directory:"
+        find "$BUILD_DIR" -name "*.so" -o -name "*.a" -o -name "*.dylib" 2>/dev/null | head -10
         
         FOUND_LIB=""
         for lib_path in "${POSSIBLE_LIBS[@]}"; do
