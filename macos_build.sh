@@ -54,6 +54,21 @@ echo "✅ libwarpdeck built successfully"
 echo "📚 Checking library files..."
 ls -la libwarpdeck*
 
+echo "🔧 Fixing library dependency paths for Flutter compatibility..."
+# Change hardcoded Homebrew paths to @rpath for better portability
+install_name_tool -change /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib @rpath/libssl.3.dylib libwarpdeck.dylib
+install_name_tool -change /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib @rpath/libcrypto.3.dylib libwarpdeck.dylib
+install_name_tool -change /opt/homebrew/opt/brotli/lib/libbrotlicommon.1.dylib @rpath/libbrotlicommon.1.dylib libwarpdeck.dylib
+install_name_tool -change /opt/homebrew/opt/brotli/lib/libbrotlienc.1.dylib @rpath/libbrotlienc.1.dylib libwarpdeck.dylib
+install_name_tool -change /opt/homebrew/opt/brotli/lib/libbrotlidec.1.dylib @rpath/libbrotlidec.1.dylib libwarpdeck.dylib
+
+# Add runtime search paths
+install_name_tool -add_rpath /opt/homebrew/lib libwarpdeck.dylib 2>/dev/null || true
+install_name_tool -add_rpath /opt/homebrew/opt/openssl@3/lib libwarpdeck.dylib 2>/dev/null || true
+install_name_tool -add_rpath /opt/homebrew/opt/brotli/lib libwarpdeck.dylib 2>/dev/null || true
+
+echo "✅ Library dependency paths updated"
+
 cd ../..
 
 # Build Flutter app
@@ -70,12 +85,16 @@ echo "🔧 Running code generation..."
 dart run build_runner build --delete-conflicting-outputs --verbose
 
 echo "🔍 Running static analysis..."
-dart analyze
+dart analyze --fatal-warnings
 
 echo "🏗️ Building Flutter macOS app..."
 flutter build macos --release --verbose
 
-echo "📚 Copying libwarpdeck.dylib to app bundle..."
+echo "📚 Copying libwarpdeck.dylib to Flutter project and app bundle..."
+# Copy to Flutter project root for development
+cp ../../libwarpdeck/build/libwarpdeck.dylib ./
+
+# Copy to app bundle for release
 mkdir -p build/macos/Build/Products/Release/warpdeck_gui.app/Contents/Frameworks
 cp ../../libwarpdeck/build/libwarpdeck.dylib build/macos/Build/Products/Release/warpdeck_gui.app/Contents/Frameworks/
 

@@ -90,23 +90,33 @@ class WarpDeckFFI {
         // Try multiple paths for the dylib
         final executableDir = path.dirname(Platform.resolvedExecutable);
         final possiblePaths = [
+          // Current working directory (Flutter project root)
+          'libwarpdeck.dylib',
           // Bundled with app in same directory as executable
           path.join(executableDir, 'libwarpdeck.dylib'),
           // Development path from Flutter project
           '../../../libwarpdeck/build/libwarpdeck.dylib',
-          // Bundled with app (relative)
-          'libwarpdeck.dylib',
           // Absolute development path
           '/Users/jesse/code/WarpDeck/libwarpdeck/build/libwarpdeck.dylib',
+          // macOS app bundle Frameworks directory
+          path.join(executableDir, '..', 'Frameworks', 'libwarpdeck.dylib'),
         ];
         
         DynamicLibrary? lib;
         
+        // Debug info for library loading (can be commented out for production)
+        // print('🔍 Platform.resolvedExecutable: ${Platform.resolvedExecutable}');
+        // print('🔍 executableDir: $executableDir');
+        // print('🔍 Current working directory: ${Directory.current.path}');
+        
         for (final path in possiblePaths) {
           try {
             lib = DynamicLibrary.open(path);
+            print('✅ Successfully loaded libwarpdeck.dylib from: $path');
             break;
           } catch (e) {
+            // Only show detailed errors if debugging is needed
+            // print('❌ Failed to load from $path: $e');
             continue;
           }
         }

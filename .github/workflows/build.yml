@@ -133,7 +133,7 @@ jobs:
           
           # Run analysis
           echo "🔍 Running static analysis..."
-          dart analyze
+          dart analyze --fatal-warnings
           
           # Build the Flutter app
           echo "🏗️ Building Flutter Linux app..."

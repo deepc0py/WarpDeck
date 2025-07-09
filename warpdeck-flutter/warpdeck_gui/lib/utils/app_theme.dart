@@ -68,7 +68,7 @@ class AppTheme {
           color: Colors.black87,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -182,7 +182,7 @@ class AppTheme {
           color: Colors.white,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -358,10 +358,8 @@ class SteamDeckTheme {
       colorScheme: const ColorScheme.dark(
         primary: steamDeckBlue,
         secondary: steamDeckAccent,
-        surface: steamDeckGray,
+        surface: steamDeckDarkGray,
         onSurface: Colors.white,
-        background: steamDeckDarkGray,
-        onBackground: Colors.white,
       ),
       // Apply Steam Deck optimizations to the dark theme
     );

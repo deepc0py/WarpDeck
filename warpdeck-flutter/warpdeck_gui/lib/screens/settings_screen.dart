@@ -480,6 +480,8 @@ class _StatusDisplay extends StatelessWidget {
         return Colors.grey;
       case WarpDeckStatus.initialized:
         return Colors.orange;
+      case WarpDeckStatus.starting:
+        return Colors.blue;
       case WarpDeckStatus.running:
         return Colors.green;
       case WarpDeckStatus.error:
@@ -493,6 +495,8 @@ class _StatusDisplay extends StatelessWidget {
         return 'Not Started';
       case WarpDeckStatus.initialized:
         return 'Ready';
+      case WarpDeckStatus.starting:
+        return 'Starting...';
       case WarpDeckStatus.running:
         return 'Running';
       case WarpDeckStatus.error:
