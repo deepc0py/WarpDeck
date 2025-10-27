@@ -82,7 +82,7 @@ jobs:
           echo "LIB_PATH=$(pwd)" >> $GITHUB_ENV
 
       - name: Upload libwarpdeck artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: libwarpdeck-linux
           path: |
