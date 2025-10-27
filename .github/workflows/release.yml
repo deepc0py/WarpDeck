@@ -128,7 +128,7 @@ jobs:
         echo "📁 DMG at workspace root: $(ls -la WarpDeck-macOS.dmg)"
 
     - name: Upload macOS artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: warpdeck-macos
         path: |
@@ -269,7 +269,7 @@ jobs:
   #       Get-Item WarpDeck-Windows.zip
   # 
   #   - name: Upload Windows artifacts
-  #     uses: actions/upload-artifact@v4
+  #     uses: actions/upload-artifact@v5
   #     with:
   #       name: warpdeck-windows
   #       path: |
@@ -622,7 +622,7 @@ jobs:
         echo "📁 AppImage at workspace root: $(ls -la WarpDeck.AppImage)"
 
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: warpdeck-linux
         path: |
