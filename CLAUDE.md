@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 
 ### Building libwarpdeck (C++ core library)
+
+**Linux:**
 ```bash
 cd libwarpdeck
 mkdir -p build && cd build
@@ -17,11 +19,22 @@ cmake -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake ..
 make -j$(nproc)
 ```
 
+**macOS (uses Homebrew OpenSSL):**
+```bash
+cd libwarpdeck
+mkdir -p build && cd build
+cmake -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) ..
+make -j$(sysctl -n hw.ncpu)
+```
+
 ### Building the CLI
 ```bash
 cd warpdeck-cli
 mkdir -p build && cd build
+# Linux: use vcpkg toolchain
 cmake -DCMAKE_TOOLCHAIN_FILE=../../vcpkg/scripts/buildsystems/vcpkg.cmake ..
+# macOS: use Homebrew OpenSSL
+cmake -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) ..
 make -j$(nproc)
 ```
 
@@ -53,6 +66,24 @@ flutter run -d macos   # or -d linux
 ```bash
 cd warpdeck-flutter/warpdeck_gui
 flutter analyze
+```
+
+## Testing
+
+### Standalone Test Binaries (at project root)
+These test mDNS discovery functionality:
+```bash
+# Build test binaries (requires libwarpdeck built first)
+DYLD_LIBRARY_PATH=./libwarpdeck/build ./test_warpdeck_binary
+DYLD_LIBRARY_PATH=./libwarpdeck/build ./test_self_discovery
+DYLD_LIBRARY_PATH=./libwarpdeck/build ./test_mdns_debug
+```
+
+### Local Build Tests
+```bash
+./test_local_build.sh   # Comprehensive local build test
+./dev_build.sh          # Quick development build
+./macos_build.sh        # macOS-specific build script
 ```
 
 ## Architecture Overview
@@ -99,6 +130,11 @@ Cross-platform GUI using Flutter with dart:ffi bindings to libwarpdeck:
 State management: Riverpod
 Desktop integration: window_manager, system_tray, launch_at_startup
 
+FFI bindings are auto-generated from `libwarpdeck/include/warpdeck.h` using ffigen. Regenerate with:
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
 ## Development Workflow
 
 ### Branch Strategy
@@ -112,18 +148,20 @@ Desktop integration: window_manager, system_tray, launch_at_startup
 - Reference issues in PR descriptions (e.g., "Resolves #123")
 
 ### CI/CD
-- `.github/workflows/build.yml`: Runs on PRs, builds all components
+- `.github/workflows/build.yml`: Runs on PRs, builds all components on Ubuntu
 - `.github/workflows/release.yml`: Creates releases on main branch merges
 - Cross-platform: macOS and Linux builds
 
 ## Platform Notes
 
 ### macOS
-- Uses vcpkg for C++ dependencies
+- Uses Homebrew OpenSSL (not vcpkg) for C++ dependencies
 - Requires Xcode Command Line Tools
 - App sandboxed with security-scoped bookmarks for file access
+- Shared library requires `DYLD_LIBRARY_PATH` when testing locally
 
 ### Linux (including Steam Deck)
+- Uses vcpkg for C++ dependencies (OpenSSL)
 - Requires avahi-client for mDNS
 - Packaged as Flatpak or AppImage
 - Gaming Mode UI (10-foot interface) detected via gamescope session
@@ -134,7 +172,7 @@ Desktop integration: window_manager, system_tray, launch_at_startup
 - OpenSSL (TLS, crypto)
 - cpp-httplib (HTTP server/client)
 - nlohmann/json (JSON parsing)
-- mjansson/mdns (mDNS discovery)
+- mjansson/mdns (mDNS discovery) - located in `third_party/mjansson_mdns/`
 
 **Flutter:**
 - flutter_riverpod (state management)
