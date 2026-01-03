@@ -64,6 +64,15 @@ vcpkg/
 # Test output
 test_output/
 
+# Test binaries and scripts at root (use docker/ for testing)
+/test_*
+/setup_*_vm*.sh
+/*.patch
+/*.AppImage
+
+# Other AI tools
+.serena/
+
 # Local configuration
 .env
 .env.local
