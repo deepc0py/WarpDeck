@@ -44,36 +44,15 @@ jobs:
     - name: Install dependencies
       run: |
         # Install Homebrew dependencies for libwarpdeck
+        # OpenSSL from Homebrew works directly - no vcpkg needed on macOS
         brew install openssl brotli pkg-config
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
-        
-    - name: Cache vcpkg packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          /usr/local/share/vcpkg/installed
-          ${{ env.VCPKG_ROOT }}/packages
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json', '**/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-vcpkg-
-
-    - name: Install C++ dependencies
-      run: |
-        # Only OpenSSL is needed from vcpkg - nlohmann-json is fetched via CMake FetchContent
-        $VCPKG_ROOT/vcpkg install openssl
 
     - name: Build libwarpdeck
       run: |
         cd libwarpdeck
         rm -rf build
         mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-              ..
+        cmake -DCMAKE_BUILD_TYPE=Release ..
         make -j$(sysctl -n hw.ncpu)
         cd ../..
 
@@ -82,9 +61,7 @@ jobs:
         cd warpdeck-cli
         rm -rf build
         mkdir -p build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-              ..
+        cmake -DCMAKE_BUILD_TYPE=Release ..
         make -j$(sysctl -n hw.ncpu)
         cd ../..
 
