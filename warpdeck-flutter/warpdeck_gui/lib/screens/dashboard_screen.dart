@@ -22,9 +22,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize WarpDeck service
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(warpDeckServiceProvider.notifier).initialize();
+    // Initialize and start WarpDeck service
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final service = ref.read(warpDeckServiceProvider.notifier);
+      await service.initialize();
+      await service.start();
     });
   }
 

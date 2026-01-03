@@ -7,6 +7,7 @@
 #include "transfer_manager.h"
 #include "utils.h"
 #include "logger.h"
+#include <nlohmann/json.hpp>
 #include <memory>
 #include <string>
 #include <cstring>
@@ -83,59 +84,79 @@ WarpDeckHandle* warpdeck_create(const Callbacks* callbacks, const char* config_d
         }
         
         // Set up discovery manager callbacks
+        // NOTE: We use copy_string() (new char[]) to allocate heap memory for callback strings
+        // because NativeCallable.listener in Dart processes callbacks asynchronously.
+        // By the time Dart reads the string, the original std::string may be destroyed.
+        // Dart must call warpdeck_free_string() (which uses delete[]) after processing.
         handle->discovery_manager->set_peer_discovered_callback(
             [handle = handle.get()](const PeerInfo& peer) {
                 LOG_CORE_INFO() << "Peer discovered: " << peer.name << " (ID: " << peer.id << ")";
                 std::string json = utils::peer_info_to_json(peer);
-                safe_call_callback(handle->callbacks.on_peer_discovered, json.c_str());
+                char* json_copy = copy_string(json);  // Heap allocated with new[], Dart must call warpdeck_free_string()
+                safe_call_callback(handle->callbacks.on_peer_discovered, json_copy);
             });
-            
+
         handle->discovery_manager->set_peer_lost_callback(
             [handle = handle.get()](const std::string& device_id) {
                 LOG_CORE_INFO() << "Peer lost: " << device_id;
-                safe_call_callback(handle->callbacks.on_peer_lost, device_id.c_str());
+                char* id_copy = copy_string(device_id);  // Heap allocated with new[], Dart must call warpdeck_free_string()
+                safe_call_callback(handle->callbacks.on_peer_lost, id_copy);
             });
         
-        // Set up transfer manager callbacks
+        // Set up transfer manager callbacks (using copy_string for async Dart callbacks)
         handle->transfer_manager->set_progress_callback(
             [handle = handle.get()](const std::string& transfer_id, float progress, uint64_t bytes) {
-                safe_call_callback(handle->callbacks.on_transfer_progress_update, 
-                                 transfer_id.c_str(), progress, bytes);
+                char* id_copy = copy_string(transfer_id);  // Heap allocated with new[], Dart must call warpdeck_free_string()
+                safe_call_callback(handle->callbacks.on_transfer_progress_update,
+                                 id_copy, progress, bytes);
             });
-            
+
         handle->transfer_manager->set_completion_callback(
             [handle = handle.get()](const std::string& transfer_id, bool success, const std::string& error) {
-                safe_call_callback(handle->callbacks.on_transfer_completed, 
-                                 transfer_id.c_str(), success, error.empty() ? nullptr : error.c_str());
+                char* id_copy = copy_string(transfer_id);  // Heap allocated with new[], Dart must call warpdeck_free_string()
+                char* error_copy = error.empty() ? nullptr : copy_string(error);  // Heap allocated with new[] if not empty
+                safe_call_callback(handle->callbacks.on_transfer_completed,
+                                 id_copy, success, error_copy);
             });
-            
+
         handle->transfer_manager->set_incoming_request_callback(
-            [handle = handle.get()](const std::string& transfer_id, const std::string& peer_name, 
+            [handle = handle.get()](const std::string& transfer_id, const std::string& peer_name,
                                    const std::vector<FileMetadata>& files) {
                 // Create JSON for the transfer request
                 TransferRequest request;
                 request.files = files;
                 std::string json = utils::transfer_request_to_json(request);
-                safe_call_callback(handle->callbacks.on_incoming_transfer_request, json.c_str());
+                char* json_copy = copy_string(json);  // Heap allocated with new[], Dart must call warpdeck_free_string()
+                safe_call_callback(handle->callbacks.on_incoming_transfer_request, json_copy);
             });
         
         // Set up API server callbacks
         handle->api_server->set_transfer_request_callback(
-            [handle = handle.get()](const std::string& client_fingerprint, 
+            [handle = handle.get()](const std::string& client_fingerprint,
                                    const TransferRequest& request,
                                    std::function<void(bool, const std::string&)> response_callback) {
-                // Check if peer is trusted
+                // Try to find peer info by fingerprint from discovered peers
+                std::string peer_id = client_fingerprint;
+                std::string peer_name = "Unknown Peer";
                 bool is_trusted = false;
-                for (const auto& file : request.files) {
-                    // For simplicity, we'll determine peer info from the first request
-                    // In a real implementation, we'd extract this from the TLS session
-                    break;
+
+                // Look up peer by fingerprint in discovered peers
+                auto peers = handle->discovery_manager->get_discovered_peers();
+                for (const auto& [device_id, peer] : peers) {
+                    if (peer.fingerprint == client_fingerprint) {
+                        peer_id = peer.id;
+                        peer_name = peer.name;
+                        break;
+                    }
                 }
-                
+
+                // Check if peer is in trust store
+                is_trusted = handle->security_manager->is_peer_trusted(peer_id, client_fingerprint);
+
                 // Handle the incoming request through transfer manager
                 std::string transfer_id = handle->transfer_manager->handle_incoming_request(
-                    "unknown_peer", "Unknown Peer", request);
-                
+                    peer_id, peer_name, request);
+
                 if (!is_trusted) {
                     // Will trigger the incoming request callback to UI
                     response_callback(false, ""); // Will be handled by respond_to_transfer
@@ -256,13 +277,41 @@ void warpdeck_initiate_transfer(WarpDeckHandle* handle, const char* device_id, c
     if (!handle || !device_id || !files_json) {
         return;
     }
-    
+
     try {
-        // Parse files JSON to get file paths
-        // For now, assume files_json is a simple array of file paths
-        // In a full implementation, this would parse the FileMetadata JSON
-        std::vector<std::string> file_paths = {files_json}; // Simplified
-        
+        // Parse files_json as a JSON array of file objects
+        // Expected format: [{"name": "file.txt", "size": 1024, "path": "/full/path", "relative_path": "folder/file.txt"}, ...]
+        nlohmann::json j = nlohmann::json::parse(files_json);
+
+        if (!j.is_array()) {
+            safe_call_callback(handle->callbacks.on_error, "files_json must be a JSON array");
+            return;
+        }
+
+        std::vector<std::string> file_paths;
+        std::vector<std::string> relative_paths;
+
+        for (const auto& file_obj : j) {
+            // Extract the full path (required for sending)
+            if (file_obj.contains("path")) {
+                file_paths.push_back(file_obj["path"].get<std::string>());
+
+                // Extract relative_path if present (for folder transfers)
+                if (file_obj.contains("relative_path")) {
+                    relative_paths.push_back(file_obj["relative_path"].get<std::string>());
+                } else if (file_obj.contains("relativePath")) {
+                    relative_paths.push_back(file_obj["relativePath"].get<std::string>());
+                } else {
+                    relative_paths.push_back("");  // No relative path for this file
+                }
+            }
+        }
+
+        if (file_paths.empty()) {
+            safe_call_callback(handle->callbacks.on_error, "No valid file paths in JSON");
+            return;
+        }
+
         // Get peer info
         auto peers = handle->discovery_manager->get_discovered_peers();
         auto peer_it = peers.find(device_id);
@@ -270,17 +319,19 @@ void warpdeck_initiate_transfer(WarpDeckHandle* handle, const char* device_id, c
             safe_call_callback(handle->callbacks.on_error, "Peer not found");
             return;
         }
-        
+
         const PeerInfo& peer = peer_it->second;
-        
-        // Initiate transfer through transfer manager
+
+        // Initiate transfer through transfer manager (with relative paths for folder support)
         std::string transfer_id = handle->transfer_manager->initiate_transfer(
-            device_id, peer.name, file_paths);
-            
+            device_id, peer.name, file_paths, relative_paths);
+
         if (transfer_id.empty()) {
             safe_call_callback(handle->callbacks.on_error, "Failed to initiate transfer");
         }
-        
+
+    } catch (const nlohmann::json::parse_error& e) {
+        safe_call_callback(handle->callbacks.on_error, "Invalid JSON format");
     } catch (const std::exception& e) {
         safe_call_callback(handle->callbacks.on_error, e.what());
     }
@@ -329,7 +380,7 @@ void warpdeck_remove_trusted_device(WarpDeckHandle* handle, const char* device_i
     if (!handle || !device_id) {
         return;
     }
-    
+
     try {
         handle->security_manager->remove_trusted_peer(device_id);
     } catch (const std::exception& e) {
@@ -337,28 +388,141 @@ void warpdeck_remove_trusted_device(WarpDeckHandle* handle, const char* device_i
     }
 }
 
+// ============================================================================
+// Transfer Queue FFI Functions
+// ============================================================================
+
+const char* warpdeck_queue_transfer(WarpDeckHandle* handle, const char* device_id, const char* files_json) {
+    if (!handle || !device_id || !files_json) {
+        return nullptr;
+    }
+
+    try {
+        // Parse files_json as a JSON array (same format as initiate_transfer)
+        nlohmann::json j = nlohmann::json::parse(files_json);
+
+        if (!j.is_array()) {
+            safe_call_callback(handle->callbacks.on_error, "files_json must be a JSON array");
+            return nullptr;
+        }
+
+        std::vector<std::string> file_paths;
+        std::vector<std::string> relative_paths;
+
+        for (const auto& file_obj : j) {
+            if (file_obj.contains("path")) {
+                file_paths.push_back(file_obj["path"].get<std::string>());
+
+                if (file_obj.contains("relative_path")) {
+                    relative_paths.push_back(file_obj["relative_path"].get<std::string>());
+                } else if (file_obj.contains("relativePath")) {
+                    relative_paths.push_back(file_obj["relativePath"].get<std::string>());
+                } else {
+                    relative_paths.push_back("");
+                }
+            }
+        }
+
+        if (file_paths.empty()) {
+            safe_call_callback(handle->callbacks.on_error, "No valid file paths in JSON");
+            return nullptr;
+        }
+
+        // Get peer info
+        auto peers = handle->discovery_manager->get_discovered_peers();
+        auto peer_it = peers.find(device_id);
+        if (peer_it == peers.end()) {
+            safe_call_callback(handle->callbacks.on_error, "Peer not found");
+            return nullptr;
+        }
+
+        const PeerInfo& peer = peer_it->second;
+
+        // Queue the transfer
+        std::string queue_id = handle->transfer_manager->queue_transfer(
+            device_id, peer.name, file_paths, relative_paths);
+
+        if (queue_id.empty()) {
+            safe_call_callback(handle->callbacks.on_error, "Failed to queue transfer");
+            return nullptr;
+        }
+
+        return copy_string(queue_id);
+
+    } catch (const nlohmann::json::parse_error& e) {
+        safe_call_callback(handle->callbacks.on_error, "Invalid JSON format");
+        return nullptr;
+    } catch (const std::exception& e) {
+        safe_call_callback(handle->callbacks.on_error, e.what());
+        return nullptr;
+    }
+}
+
+bool warpdeck_cancel_queued_transfer(WarpDeckHandle* handle, const char* queue_id) {
+    if (!handle || !queue_id) {
+        return false;
+    }
+
+    try {
+        return handle->transfer_manager->cancel_queued_transfer(queue_id);
+    } catch (const std::exception& e) {
+        safe_call_callback(handle->callbacks.on_error, e.what());
+        return false;
+    }
+}
+
+const char* warpdeck_get_queue_status(WarpDeckHandle* handle) {
+    if (!handle) {
+        return nullptr;
+    }
+
+    try {
+        auto queue = handle->transfer_manager->get_queue_status();
+        nlohmann::json j = nlohmann::json::array();
+
+        for (const auto& item : queue) {
+            nlohmann::json entry;
+            entry["queueId"] = item.queue_id;
+            entry["peerDeviceId"] = item.peer_device_id;
+            entry["peerName"] = item.peer_name;
+            entry["status"] = static_cast<int>(item.status);
+            entry["transferId"] = item.transfer_id;
+            entry["fileCount"] = item.file_count;
+            entry["totalBytes"] = item.total_bytes;
+            if (!item.error_message.empty()) {
+                entry["errorMessage"] = item.error_message;
+            }
+            j.push_back(entry);
+        }
+
+        return copy_string(j.dump());
+
+    } catch (const std::exception& e) {
+        safe_call_callback(handle->callbacks.on_error, e.what());
+        return nullptr;
+    }
+}
+
 const char* warpdeck_get_discovery_status(WarpDeckHandle* handle) {
     if (!handle || !handle->discovery_manager) {
         return nullptr;
     }
-    
+
     try {
         const MdnsManager* mdns_manager = handle->discovery_manager->get_mdns_manager();
         if (!mdns_manager) {
             return copy_string("{\"error\": \"MdnsManager not available\"}");
         }
-        
-        std::ostringstream status_json;
-        status_json << "{"
-                   << "\"publishing\": " << (mdns_manager->is_publishing() ? "true" : "false") << ","
-                   << "\"discovering\": " << (mdns_manager->is_discovering() ? "true" : "false") << ","
-                   << "\"started\": " << (handle->started ? "true" : "false") << ","
-                   << "\"device_id\": \"" << handle->device_id << "\","
-                   << "\"device_name\": \"" << handle->device_name << "\","
-                   << "\"current_port\": " << handle->current_port
-                   << "}";
-        
-        return copy_string(status_json.str());
+
+        nlohmann::json status;
+        status["publishing"] = mdns_manager->is_publishing();
+        status["discovering"] = mdns_manager->is_discovering();
+        status["started"] = handle->started;
+        status["deviceId"] = handle->device_id;
+        status["deviceName"] = handle->device_name;
+        status["currentPort"] = handle->current_port;
+
+        return copy_string(status.dump());
     } catch (const std::exception& e) {
         safe_call_callback(handle->callbacks.on_error, e.what());
         return nullptr;
@@ -369,33 +533,26 @@ const char* warpdeck_get_discovered_peers(WarpDeckHandle* handle) {
     if (!handle || !handle->discovery_manager) {
         return nullptr;
     }
-    
+
     try {
         auto peers = handle->discovery_manager->get_discovered_peers();
-        
-        std::ostringstream peers_json;
-        peers_json << "{"
-                  << "\"peer_count\": " << peers.size() << ","
-                  << "\"peers\": [";
-        
-        bool first = true;
+
+        nlohmann::json result;
+        result["peerCount"] = peers.size();
+        result["peers"] = nlohmann::json::array();
+
         for (const auto& [device_id, peer] : peers) {
-            if (!first) peers_json << ",";
-            first = false;
-            
-            peers_json << "{"
-                      << "\"id\": \"" << peer.id << "\","
-                      << "\"name\": \"" << peer.name << "\","
-                      << "\"platform\": \"" << peer.platform << "\","
-                      << "\"host_address\": \"" << peer.host_address << "\","
-                      << "\"port\": " << peer.port << ","
-                      << "\"fingerprint\": \"" << peer.fingerprint.substr(0, 16) << "...\""
-                      << "}";
+            nlohmann::json peer_json;
+            peer_json["id"] = peer.id;
+            peer_json["name"] = peer.name;
+            peer_json["platform"] = peer.platform;
+            peer_json["hostAddress"] = peer.host_address;
+            peer_json["port"] = peer.port;
+            peer_json["fingerprint"] = peer.fingerprint.substr(0, 16) + "...";
+            result["peers"].push_back(peer_json);
         }
-        
-        peers_json << "]}";
-        
-        return copy_string(peers_json.str());
+
+        return copy_string(result.dump());
     } catch (const std::exception& e) {
         safe_call_callback(handle->callbacks.on_error, e.what());
         return nullptr;

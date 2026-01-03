@@ -20,12 +20,14 @@ class FileInfo {
   final String name;
   final int size;
   final String? path;
+  final String? relativePath;  // For folder transfers - preserves directory structure
   final String? hash;
 
   const FileInfo({
     required this.name,
     required this.size,
     this.path,
+    this.relativePath,
     this.hash,
   });
 
@@ -37,6 +39,70 @@ class FileInfo {
     if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)}KB';
     if (size < 1024 * 1024 * 1024) return '${(size / (1024 * 1024)).toStringAsFixed(1)}MB';
     return '${(size / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
+  }
+}
+
+// Queue status enum matching C++ QueuedTransferStatus
+enum QueuedTransferStatus {
+  queued,     // 0 - Waiting in queue
+  active,     // 1 - Currently transferring
+  completed,  // 2 - Successfully completed
+  failed,     // 3 - Failed with error
+  cancelled,  // 4 - Cancelled by user
+}
+
+// Represents a transfer in the queue
+@JsonSerializable()
+class QueuedTransfer {
+  final String queueId;
+  final String peerDeviceId;
+  final String peerName;
+  final QueuedTransferStatus status;
+  final String? transferId;
+  final int fileCount;
+  final int totalBytes;
+  final String? errorMessage;
+
+  const QueuedTransfer({
+    required this.queueId,
+    required this.peerDeviceId,
+    required this.peerName,
+    required this.status,
+    this.transferId,
+    required this.fileCount,
+    required this.totalBytes,
+    this.errorMessage,
+  });
+
+  factory QueuedTransfer.fromJson(Map<String, dynamic> json) {
+    return QueuedTransfer(
+      queueId: json['queueId'] as String,
+      peerDeviceId: json['peerDeviceId'] as String,
+      peerName: json['peerName'] as String,
+      status: QueuedTransferStatus.values[json['status'] as int],
+      transferId: json['transferId'] as String?,
+      fileCount: json['fileCount'] as int,
+      totalBytes: json['totalBytes'] as int,
+      errorMessage: json['errorMessage'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'queueId': queueId,
+    'peerDeviceId': peerDeviceId,
+    'peerName': peerName,
+    'status': status.index,
+    'transferId': transferId,
+    'fileCount': fileCount,
+    'totalBytes': totalBytes,
+    'errorMessage': errorMessage,
+  };
+
+  String get formattedTotalBytes {
+    if (totalBytes < 1024) return '${totalBytes}B';
+    if (totalBytes < 1024 * 1024) return '${(totalBytes / 1024).toStringAsFixed(1)}KB';
+    if (totalBytes < 1024 * 1024 * 1024) return '${(totalBytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    return '${(totalBytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 }
 
