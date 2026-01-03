@@ -35,6 +35,8 @@ bool file_exists(const std::string& path);
 bool create_directory(const std::string& path);
 std::string get_parent_directory(const std::string& path);
 std::string get_filename(const std::string& path);
+std::string sanitize_filename(const std::string& filename);  // Security: removes path traversal
+std::string sanitize_relative_path(const std::string& relative_path);  // Security: allows dirs, prevents traversal
 uint64_t get_file_size(const std::string& path);
 std::string calculate_file_hash(const std::string& path);
 

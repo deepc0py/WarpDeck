@@ -1,0 +1,39 @@
+# Build directories
+**/build/
+**/cmake-build-*/
+
+# IDE files
+.idea/
+.vscode/
+*.xcodeproj/
+*.xcworkspace/
+
+# Flutter specific
+warpdeck-flutter/
+**/.dart_tool/
+**/pubspec.lock
+
+# Git
+.git/
+.gitignore
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Test binaries and temp files
+*.out
+test_*
+mdns_test
+test_warpdeck
+
+# Other unnecessary files
+*.md
+!docker/*.md
+*.patch
+*.sh
+!docker/*.sh
+vcpkg/
+setup_*.sh
+VM_TESTING_GUIDE.md

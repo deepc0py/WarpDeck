@@ -32,7 +32,7 @@ bool DiscoveryManager::start(const std::string& device_name, const std::string& 
     fingerprint_ = fingerprint;
     
     // Start mDNS service publishing
-    if (!mdns_manager_->publish_service(device_id, fingerprint, port)) {
+    if (!mdns_manager_->publish_service(device_id, device_name, fingerprint, port)) {
         Logger::instance().error("DiscoveryManager", "Failed to start mDNS service publishing");
         return false;
     }
@@ -78,7 +78,7 @@ void DiscoveryManager::set_device_name(const std::string& name) {
     if (running_ && mdns_manager_) {
         // For MdnsManager, we need to restart publishing with new service info
         mdns_manager_->stop_publishing();
-        mdns_manager_->publish_service(device_id_, fingerprint_, port_);
+        mdns_manager_->publish_service(device_id_, device_name_, fingerprint_, port_);
     }
 }
 
@@ -110,7 +110,7 @@ void DiscoveryManager::update_service_registration() {
     if (mdns_manager_ && running_) {
         // For MdnsManager, we need to restart publishing with updated service info
         mdns_manager_->stop_publishing();
-        mdns_manager_->publish_service(device_id_, fingerprint_, port_);
+        mdns_manager_->publish_service(device_id_, device_name_, fingerprint_, port_);
     }
 }
 

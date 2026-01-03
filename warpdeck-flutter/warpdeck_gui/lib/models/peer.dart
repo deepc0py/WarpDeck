@@ -11,6 +11,7 @@ class Peer {
   final String fingerprint;
   final String hostAddress;
   final DateTime? lastSeen;
+  @JsonKey(defaultValue: true)
   final bool isOnline;
 
   const Peer({

@@ -1,4 +1,5 @@
 #include "api_server.h"
+#include "constants.h"
 #include "utils.h"
 #include <nlohmann/json.hpp>
 #include <thread>
@@ -31,10 +32,10 @@ bool APIServer::start(int port, const DeviceInfo& device_info) {
     
     // Find available port if none specified
     if (port == 0) {
-        for (int p = 54321; p < 65535; ++p) {
+        for (int p = constants::WARPDECK_DEFAULT_API_PORT; p < constants::WARPDECK_MAX_PORT; ++p) {
             server_->set_read_timeout(1, 0);  // 1 second timeout for quick startup
             server_->set_write_timeout(1, 0);
-            
+
             // Test if port is available by trying to bind
             if (server_->bind_to_port("0.0.0.0", p)) {
                 port_ = p;
@@ -43,7 +44,8 @@ bool APIServer::start(int port, const DeviceInfo& device_info) {
             }
         }
         if (port_ == 0) {
-            std::cerr << "No available port found in range 54321-65534" << std::endl;
+            std::cerr << "No available port found in range " << constants::WARPDECK_DEFAULT_API_PORT
+                      << "-" << (constants::WARPDECK_MAX_PORT - 1) << std::endl;
             return false; // No available port found
         }
     } else {
@@ -55,8 +57,11 @@ bool APIServer::start(int port, const DeviceInfo& device_info) {
         std::cout << "Successfully bound to specified port " << port_ << std::endl;
     }
     
-    // Start server in background thread
-    std::thread server_thread([this]() {
+    // Mark as running since bind was successful
+    running_ = true;
+
+    // Start server in background thread (stored as member for proper lifecycle)
+    server_thread_ = std::thread([this]() {
         try {
             server_->listen_after_bind();
         } catch (const std::exception& e) {
@@ -64,17 +69,19 @@ bool APIServer::start(int port, const DeviceInfo& device_info) {
             running_ = false;
         }
     });
-    server_thread.detach();
-    
-    // Mark as running since bind was successful
-    running_ = true;
+
     return true;
 }
 
 void APIServer::stop() {
     if (running_ && server_) {
-        server_->stop();
+        server_->stop();  // Signal server to stop accepting connections
         running_ = false;
+
+        // Wait for server thread to finish (proper cleanup)
+        if (server_thread_.joinable()) {
+            server_thread_.join();
+        }
     }
 }
 

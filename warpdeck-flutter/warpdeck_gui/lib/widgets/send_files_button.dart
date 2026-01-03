@@ -20,8 +20,10 @@ class SendFilesDialog extends ConsumerStatefulWidget {
 
 class _SendFilesDialogState extends ConsumerState<SendFilesDialog> {
   List<PlatformFile> selectedFiles = [];
+  List<Map<String, dynamic>> folderFiles = []; // Files from folder picker with relative paths
   Peer? selectedPeer;
   bool isLoading = false;
+  String? selectedFolderName;
 
   @override
   void initState() {
@@ -141,22 +143,86 @@ class _SendFilesDialogState extends ConsumerState<SendFilesDialog> {
 
             // File Selection
             Text(
-              'Select Files',
+              'Select Files or Folder',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            
-            // File picker button
-            OutlinedButton.icon(
-              onPressed: _pickFiles,
-              icon: Icon(MdiIcons.fileMultiple),
-              label: const Text('Choose Files'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
+
+            // File and Folder picker buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFiles,
+                    icon: Icon(MdiIcons.fileMultiple),
+                    label: const Text('Files'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickFolder,
+                    icon: Icon(MdiIcons.folderOpen),
+                    label: const Text('Folder'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            
+
             const SizedBox(height: 16),
+
+            // Show selected folder info
+            if (selectedFolderName != null && folderFiles.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(MdiIcons.folder, color: Theme.of(context).colorScheme.secondary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedFolderName!,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Text(
+                            '${folderFiles.length} files - ${_formatFileSize(_getFolderTotalSize())}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(MdiIcons.close, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          selectedFolderName = null;
+                          folderFiles.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             
             // Selected files list
             if (selectedFiles.isNotEmpty) ...[
@@ -269,9 +335,59 @@ class _SendFilesDialogState extends ConsumerState<SendFilesDialog> {
     }
   }
 
+  Future<void> _pickFolder() async {
+    try {
+      final folderPath = await FilePicker.platform.getDirectoryPath();
+
+      if (folderPath != null) {
+        setState(() {
+          isLoading = true;
+        });
+
+        // Gather files from the folder using the service
+        final files = await ref.read(warpDeckServiceProvider.notifier)
+            .gatherFilesFromDirectory(folderPath);
+
+        if (files.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No files found in the selected folder'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        } else {
+          setState(() {
+            // Extract folder name from path
+            selectedFolderName = folderPath.split('/').last;
+            folderFiles = files;
+          });
+        }
+
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking folder: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   bool _canSend() {
-    return selectedPeer != null && 
-           selectedFiles.isNotEmpty && 
+    final hasFiles = selectedFiles.isNotEmpty || folderFiles.isNotEmpty;
+    return selectedPeer != null &&
+           hasFiles &&
            !isLoading &&
            selectedPeer!.isOnline;
   }
@@ -284,21 +400,44 @@ class _SendFilesDialogState extends ConsumerState<SendFilesDialog> {
     });
 
     try {
-      final filePaths = selectedFiles
-          .where((file) => file.path != null)
-          .map((file) => file.path!)
-          .toList();
+      final service = ref.read(warpDeckServiceProvider.notifier);
+      int totalFiles = 0;
 
-      await ref.read(warpDeckServiceProvider.notifier).sendFiles(
-        selectedPeer!.id,
-        filePaths,
-      );
+      // Queue folder files first (they have relative paths for structure)
+      if (folderFiles.isNotEmpty) {
+        final queueId = await service.queueFiles(selectedPeer!.id, folderFiles);
+        if (queueId != null) {
+          totalFiles += folderFiles.length;
+        }
+      }
+
+      // Queue individual files (no relative path, flat structure)
+      if (selectedFiles.isNotEmpty) {
+        final fileData = selectedFiles
+            .where((file) => file.path != null)
+            .map((file) => {
+              'path': file.path!,
+              'name': file.name,
+              'size': file.size,
+            })
+            .toList();
+
+        if (fileData.isNotEmpty) {
+          final queueId = await service.queueFiles(selectedPeer!.id, fileData);
+          if (queueId != null) {
+            totalFiles += fileData.length;
+          }
+        }
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
+        final message = folderFiles.isNotEmpty && selectedFolderName != null
+            ? 'Queued $selectedFolderName ($totalFiles files) to ${selectedPeer!.name}'
+            : 'Queued $totalFiles files to ${selectedPeer!.name}';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sending ${selectedFiles.length} files to ${selectedPeer!.name}'),
+            content: Text(message),
             backgroundColor: Colors.green,
           ),
         );
@@ -367,5 +506,9 @@ class _SendFilesDialogState extends ConsumerState<SendFilesDialog> {
 
   int _getTotalSize() {
     return selectedFiles.fold(0, (sum, file) => sum + file.size);
+  }
+
+  int _getFolderTotalSize() {
+    return folderFiles.fold(0, (sum, file) => sum + (file['size'] as int? ?? 0));
   }
 }

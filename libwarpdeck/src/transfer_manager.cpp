@@ -21,17 +21,30 @@ void TransferManager::set_progress_callback(ProgressCallback callback) {
 }
 
 void TransferManager::set_completion_callback(CompletionCallback callback) {
-    completion_callback_ = callback;
+    // Wrap the callback to also trigger queue processing when transfers complete
+    completion_callback_ = [this, callback](const std::string& transfer_id, bool success, const std::string& error) {
+        // Call the original callback first
+        if (callback) {
+            callback(transfer_id, success, error);
+        }
+        // Then process the queue
+        on_transfer_finished(transfer_id, success, error);
+    };
 }
 
 void TransferManager::set_incoming_request_callback(IncomingRequestCallback callback) {
     incoming_request_callback_ = callback;
 }
 
+void TransferManager::set_queue_status_callback(QueueStatusCallback callback) {
+    queue_status_callback_ = callback;
+}
+
 std::string TransferManager::initiate_transfer(const std::string& peer_device_id, const std::string& peer_name,
-                                              const std::vector<std::string>& file_paths) {
+                                              const std::vector<std::string>& file_paths,
+                                              const std::vector<std::string>& relative_paths) {
     std::string transfer_id = generate_transfer_id();
-    
+
     TransferInfo transfer;
     transfer.transfer_id = transfer_id;
     transfer.peer_device_id = peer_device_id;
@@ -40,31 +53,37 @@ std::string TransferManager::initiate_transfer(const std::string& peer_device_id
     transfer.status = TransferStatus::PENDING_APPROVAL;
     transfer.total_bytes = 0;
     transfer.transferred_bytes = 0;
-    
+
     // Build file metadata
-    for (const auto& file_path : file_paths) {
+    for (size_t i = 0; i < file_paths.size(); ++i) {
+        const auto& file_path = file_paths[i];
         if (!utils::file_exists(file_path)) {
             continue;
         }
-        
+
         FileMetadata file_meta;
         file_meta.name = utils::get_filename(file_path);
         file_meta.size = utils::get_file_size(file_path);
         file_meta.hash = utils::calculate_file_hash(file_path);
-        
+
+        // Set relative_path if provided (for folder transfers)
+        if (i < relative_paths.size() && !relative_paths[i].empty()) {
+            file_meta.relative_path = relative_paths[i];
+        }
+
         transfer.files.push_back(file_meta);
         transfer.total_bytes += file_meta.size;
     }
-    
+
     if (transfer.files.empty()) {
         return ""; // No valid files
     }
-    
+
     {
         std::lock_guard<std::mutex> lock(transfers_mutex_);
         active_transfers_[transfer_id] = transfer;
     }
-    
+
     return transfer_id;
 }
 
@@ -174,17 +193,25 @@ bool TransferManager::handle_file_upload(const std::string& transfer_id, int fil
                 // Check if all files are complete
                 bool all_complete = true;
                 for (size_t i = 0; i < transfer.files.size(); ++i) {
-                    std::string final_path = transfer.destination_folder + "/" + transfer.files[i].name;
+                    const FileMetadata& file_meta = transfer.files[i];
+                    std::string final_path;
+                    if (!file_meta.relative_path.empty()) {
+                        std::string safe_relative = utils::sanitize_relative_path(file_meta.relative_path);
+                        final_path = transfer.destination_folder + "/" + safe_relative;
+                    } else {
+                        std::string safe_name = utils::sanitize_filename(file_meta.name);
+                        final_path = transfer.destination_folder + "/" + safe_name;
+                    }
                     if (!utils::file_exists(final_path)) {
                         all_complete = false;
                         break;
                     }
                 }
-                
+
                 if (all_complete) {
                     transfer.status = TransferStatus::COMPLETED;
                     cleanup_transfer(transfer_id);
-                    
+
                     if (completion_callback_) {
                         completion_callback_(transfer_id, true, "");
                     }
@@ -257,34 +284,44 @@ bool TransferManager::create_temporary_file(const std::string& transfer_id, int 
 
 bool TransferManager::finalize_received_file(const std::string& transfer_id, int file_index) {
     auto temp_it = temp_file_paths_.find(transfer_id);
-    if (temp_it == temp_file_paths_.end() || 
+    if (temp_it == temp_file_paths_.end() ||
         file_index >= static_cast<int>(temp_it->second.size())) {
         return false;
     }
-    
+
     const std::string& temp_path = temp_it->second[file_index];
-    
+
     auto transfer_it = active_transfers_.find(transfer_id);
     if (transfer_it == active_transfers_.end() ||
         file_index >= static_cast<int>(transfer_it->second.files.size())) {
         return false;
     }
-    
+
     const FileMetadata& file_meta = transfer_it->second.files[file_index];
-    std::string final_path = transfer_it->second.destination_folder + "/" + file_meta.name;
-    
+    std::string final_path;
+
+    if (!file_meta.relative_path.empty()) {
+        // Folder transfer: use relative_path to preserve directory structure
+        std::string safe_relative = utils::sanitize_relative_path(file_meta.relative_path);
+        final_path = transfer_it->second.destination_folder + "/" + safe_relative;
+    } else {
+        // Flat file transfer: use sanitized filename only (backwards compatible)
+        std::string safe_name = utils::sanitize_filename(file_meta.name);
+        final_path = transfer_it->second.destination_folder + "/" + safe_name;
+    }
+
     try {
-        // Ensure destination directory exists
+        // Ensure destination directory exists (creates parent dirs for folder transfers)
         std::string dest_dir = utils::get_parent_directory(final_path);
         if (!utils::create_directory(dest_dir)) {
             return false;
         }
-        
+
         // Move temporary file to final destination
         std::filesystem::rename(temp_path, final_path);
-        
+
         return true;
-        
+
     } catch (const std::exception& e) {
         std::cerr << "Error finalizing file: " << e.what() << std::endl;
         return false;
@@ -315,10 +352,205 @@ void TransferManager::update_transfer_progress(const std::string& transfer_id) {
     auto it = active_transfers_.find(transfer_id);
     if (it != active_transfers_.end() && progress_callback_) {
         const TransferInfo& transfer = it->second;
-        float progress = transfer.total_bytes > 0 ? 
+        float progress = transfer.total_bytes > 0 ?
             (static_cast<float>(transfer.transferred_bytes) / transfer.total_bytes) * 100.0f : 0.0f;
-        
+
         progress_callback_(transfer_id, progress, transfer.transferred_bytes);
+    }
+}
+
+// ============================================================================
+// Queue Implementation
+// ============================================================================
+
+std::string TransferManager::queue_transfer(const std::string& peer_device_id, const std::string& peer_name,
+                                           const std::vector<std::string>& file_paths,
+                                           const std::vector<std::string>& relative_paths) {
+    QueuedTransfer queued;
+    queued.queue_id = generate_transfer_id();
+    queued.peer_device_id = peer_device_id;
+    queued.peer_name = peer_name;
+    queued.file_paths = file_paths;
+    queued.relative_paths = relative_paths;
+    queued.status = QueuedTransferStatus::QUEUED;
+    queued.queued_at = std::chrono::system_clock::now();
+    queued.file_count = static_cast<int>(file_paths.size());
+
+    // Calculate total bytes
+    queued.total_bytes = 0;
+    for (const auto& path : file_paths) {
+        if (utils::file_exists(path)) {
+            queued.total_bytes += utils::get_file_size(path);
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+        transfer_queue_.push_back(queued);
+    }
+
+    // Notify about queue update
+    notify_queue_positions();
+
+    // Try to start processing if nothing is active
+    process_next_in_queue();
+
+    return queued.queue_id;
+}
+
+bool TransferManager::cancel_queued_transfer(const std::string& queue_id) {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+
+    for (auto it = transfer_queue_.begin(); it != transfer_queue_.end(); ++it) {
+        if (it->queue_id == queue_id) {
+            if (it->status == QueuedTransferStatus::QUEUED) {
+                // Not started yet, just remove from queue
+                transfer_queue_.erase(it);
+                notify_queue_positions();
+                return true;
+            } else if (it->status == QueuedTransferStatus::ACTIVE) {
+                // Currently active, cancel the underlying transfer
+                if (!it->transfer_id.empty()) {
+                    // Need to release queue lock before calling cancel_transfer (which locks transfers_mutex_)
+                    std::string transfer_id = it->transfer_id;
+                    it->status = QueuedTransferStatus::CANCELLED;
+                    current_queue_id_.clear();
+
+                    // Unlock queue mutex, cancel transfer, then process next
+                    lock.~lock_guard();  // Manual unlock
+                    cancel_transfer(transfer_id);
+
+                    // Reacquire and process next
+                    std::lock_guard<std::mutex> new_lock(queue_mutex_);
+                    // process_next_in_queue will be called by on_transfer_finished
+                }
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
+}
+
+std::vector<QueuedTransfer> TransferManager::get_queue_status() const {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+    return std::vector<QueuedTransfer>(transfer_queue_.begin(), transfer_queue_.end());
+}
+
+void TransferManager::process_next_in_queue() {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+
+    // Check if there's already an active transfer
+    if (!current_queue_id_.empty()) {
+        return;  // Wait for current transfer to finish
+    }
+
+    // Find next queued transfer
+    for (auto& queued : transfer_queue_) {
+        if (queued.status == QueuedTransferStatus::QUEUED) {
+            // Start this transfer
+            queued.status = QueuedTransferStatus::ACTIVE;
+            current_queue_id_ = queued.queue_id;
+
+            // Actually initiate the transfer (releases queue lock temporarily)
+            // We need to copy data since we're about to unlock
+            std::string peer_device_id = queued.peer_device_id;
+            std::string peer_name = queued.peer_name;
+            std::vector<std::string> file_paths = queued.file_paths;
+            std::vector<std::string> relative_paths = queued.relative_paths;
+
+            // Unlock before calling initiate_transfer
+            lock.~lock_guard();
+
+            std::string transfer_id = initiate_transfer(peer_device_id, peer_name, file_paths, relative_paths);
+
+            // Reacquire lock and update transfer_id
+            std::lock_guard<std::mutex> new_lock(queue_mutex_);
+            for (auto& q : transfer_queue_) {
+                if (q.queue_id == current_queue_id_) {
+                    q.transfer_id = transfer_id;
+                    break;
+                }
+            }
+
+            // Notify queue position updates
+            notify_queue_positions();
+            return;
+        }
+    }
+}
+
+void TransferManager::on_transfer_finished(const std::string& transfer_id, bool success, const std::string& error_message) {
+    {
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+
+        // Find and update the queued entry
+        for (auto& queued : transfer_queue_) {
+            if (queued.transfer_id == transfer_id) {
+                queued.status = success ? QueuedTransferStatus::COMPLETED : QueuedTransferStatus::FAILED;
+                queued.error_message = error_message;
+                break;
+            }
+        }
+
+        // Clear current active marker
+        current_queue_id_.clear();
+
+        // Clean up old completed/failed entries
+        cleanup_old_queue_entries();
+    }
+
+    // Process next in queue (outside lock)
+    process_next_in_queue();
+}
+
+void TransferManager::notify_queue_positions() {
+    if (!queue_status_callback_) {
+        return;
+    }
+
+    // Count only queued items (not completed/failed)
+    int total = 0;
+    for (const auto& q : transfer_queue_) {
+        if (q.status == QueuedTransferStatus::QUEUED || q.status == QueuedTransferStatus::ACTIVE) {
+            total++;
+        }
+    }
+
+    int position = 1;
+    for (const auto& q : transfer_queue_) {
+        if (q.status == QueuedTransferStatus::QUEUED || q.status == QueuedTransferStatus::ACTIVE) {
+            queue_status_callback_(q.queue_id, position, total);
+            position++;
+        }
+    }
+}
+
+void TransferManager::cleanup_old_queue_entries() {
+    // Keep only the last 10 completed/failed entries
+    const size_t max_history = 10;
+
+    // Count completed/failed entries
+    size_t completed_count = 0;
+    for (const auto& q : transfer_queue_) {
+        if (q.status == QueuedTransferStatus::COMPLETED ||
+            q.status == QueuedTransferStatus::FAILED ||
+            q.status == QueuedTransferStatus::CANCELLED) {
+            completed_count++;
+        }
+    }
+
+    // Remove oldest completed entries if we have too many
+    while (completed_count > max_history) {
+        for (auto it = transfer_queue_.begin(); it != transfer_queue_.end(); ++it) {
+            if (it->status == QueuedTransferStatus::COMPLETED ||
+                it->status == QueuedTransferStatus::FAILED ||
+                it->status == QueuedTransferStatus::CANCELLED) {
+                transfer_queue_.erase(it);
+                completed_count--;
+                break;
+            }
+        }
     }
 }
 

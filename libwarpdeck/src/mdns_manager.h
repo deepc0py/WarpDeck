@@ -41,7 +41,8 @@ public:
     MdnsManager& operator=(const MdnsManager&) = delete;
     
     // Publishing interface
-    bool publish_service(const std::string& device_id, const std::string& fingerprint, int port);
+    bool publish_service(const std::string& device_id, const std::string& device_name,
+                        const std::string& fingerprint, int port);
     void stop_publishing();
     
     // Discovery interface
@@ -59,6 +60,7 @@ public:
 private:
     struct ServiceInfo {
         std::string device_id;
+        std::string device_name;
         std::string fingerprint;
         int port;
     };
@@ -90,6 +92,10 @@ private:
     // Peer tracking
     std::map<std::string, DiscoveredPeer> discovered_peers_;
     mutable std::mutex peers_mutex_;
+
+    // Pending peers (partial info being assembled from multiple mDNS records)
+    std::map<std::string, PeerInfo> pending_peers_;
+    std::mutex pending_peers_mutex_;
     
     // Socket management
     std::vector<int> sockets_;
@@ -101,8 +107,6 @@ private:
     void cleanup_sockets();
     
     // Publishing implementation
-    void handle_mdns_query(int sock, const struct sockaddr* from, size_t addrlen, 
-                          const void* buffer, size_t size);
     void send_service_response(int sock, const struct sockaddr* to, size_t addrlen,
                               const std::string& query_name, uint16_t query_type);
     void send_service_announcement();
@@ -132,7 +136,15 @@ private:
                               mdns_entry_type_t entry, uint16_t rtype, uint32_t ttl,
                               const void* data, size_t size, size_t name_offset,
                               size_t name_length, size_t record_offset, size_t record_length);
-    
+
+    // Record parsing helpers (extracted for readability)
+    void parse_ptr_record(const void* data, size_t size, size_t record_offset, PeerInfo& peer_info);
+    void parse_srv_record(const void* data, size_t record_offset, size_t record_length,
+                         const std::string& name_str, PeerInfo& peer_info);
+    void parse_txt_record(const void* data, size_t record_offset, size_t record_length,
+                         const std::string& name_str, PeerInfo& peer_info);
+    bool merge_pending_peer(PeerInfo& peer_info, const std::string& sender_address);
+    void finalize_discovered_peer(const PeerInfo& peer_info, uint32_t ttl);
 };
 
 } // namespace warpdeck

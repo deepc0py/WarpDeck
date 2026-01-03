@@ -72,24 +72,27 @@ std::string device_info_to_json(const DeviceInfo& device) {
     j["id"] = device.id;
     j["name"] = device.name;
     j["platform"] = device.platform;
-    j["protocol_version"] = device.protocol_version;
+    j["protocolVersion"] = device.protocol_version;  // camelCase for Dart
     return j.dump();
 }
 
 std::string transfer_request_to_json(const TransferRequest& request) {
     nlohmann::json j;
     j["files"] = nlohmann::json::array();
-    
+
     for (const auto& file : request.files) {
         nlohmann::json file_json;
         file_json["name"] = file.name;
         file_json["size"] = file.size;
+        if (!file.relative_path.empty()) {
+            file_json["relativePath"] = file.relative_path;  // camelCase for Dart
+        }
         if (!file.hash.empty()) {
             file_json["hash"] = file.hash;
         }
         j["files"].push_back(file_json);
     }
-    
+
     return j.dump();
 }
 
@@ -97,6 +100,9 @@ std::string file_metadata_to_json(const FileMetadata& file) {
     nlohmann::json j;
     j["name"] = file.name;
     j["size"] = file.size;
+    if (!file.relative_path.empty()) {
+        j["relativePath"] = file.relative_path;  // camelCase for Dart
+    }
     if (!file.hash.empty()) {
         j["hash"] = file.hash;
     }
@@ -105,15 +111,15 @@ std::string file_metadata_to_json(const FileMetadata& file) {
 
 std::string trusted_peers_to_json(const std::map<std::string, TrustedPeer>& peers) {
     nlohmann::json j = nlohmann::json::array();
-    
-    for (const auto& [device_id, peer] : peers) {
+
+    for (const auto& [id, peer] : peers) {
         nlohmann::json peer_json;
-        peer_json["device_id"] = peer.device_id;
+        peer_json["deviceId"] = peer.device_id;      // camelCase for Dart
         peer_json["fingerprint"] = peer.fingerprint;
         peer_json["name"] = peer.name;
         j.push_back(peer_json);
     }
-    
+
     return j.dump();
 }
 
@@ -145,14 +151,21 @@ bool parse_file_metadata(const nlohmann::json& json, FileMetadata& file) {
         if (!json.contains("name") || !json.contains("size")) {
             return false;
         }
-        
+
         file.name = json["name"];
         file.size = json["size"];
-        
+
+        // Parse optional relative_path (supports both camelCase and snake_case)
+        if (json.contains("relativePath")) {
+            file.relative_path = json["relativePath"];
+        } else if (json.contains("relative_path")) {
+            file.relative_path = json["relative_path"];
+        }
+
         if (json.contains("hash")) {
             file.hash = json["hash"];
         }
-        
+
         return true;
     } catch (const std::exception&) {
         return false;
@@ -182,6 +195,65 @@ std::string get_parent_directory(const std::string& path) {
 
 std::string get_filename(const std::string& path) {
     return std::filesystem::path(path).filename().string();
+}
+
+std::string sanitize_filename(const std::string& filename) {
+    // Security: Remove path traversal attacks from filenames received from remote peers
+    // 1. Extract just the filename (removes directory components)
+    std::string sanitized = std::filesystem::path(filename).filename().string();
+
+    // 2. Reject if empty or starts with dot (hidden files / .. attacks)
+    if (sanitized.empty() || sanitized[0] == '.') {
+        return "unnamed_file";
+    }
+
+    // 3. Remove null bytes and control characters
+    std::string result;
+    result.reserve(sanitized.size());
+    for (char c : sanitized) {
+        if (c >= 32 && c != 127) {  // Printable characters only
+            result += c;
+        }
+    }
+
+    // 4. Return safe default if nothing left
+    return result.empty() ? "unnamed_file" : result;
+}
+
+std::string sanitize_relative_path(const std::string& relative_path) {
+    // Security: Sanitize relative paths while preserving directory structure
+    // Prevents path traversal attacks (../) while allowing subdirectories
+    std::filesystem::path p(relative_path);
+    std::filesystem::path sanitized;
+
+    for (const auto& component : p) {
+        std::string part = component.string();
+
+        // Skip dangerous components
+        if (part.empty() || part == "." || part == "..") {
+            continue;
+        }
+
+        // Skip hidden files/directories (start with .)
+        if (!part.empty() && part[0] == '.') {
+            continue;
+        }
+
+        // Remove null bytes and control characters from this component
+        std::string clean;
+        clean.reserve(part.size());
+        for (char c : part) {
+            if (c >= 32 && c != 127) {  // Printable characters only
+                clean += c;
+            }
+        }
+
+        if (!clean.empty()) {
+            sanitized /= clean;
+        }
+    }
+
+    return sanitized.empty() ? "unnamed_file" : sanitized.string();
 }
 
 uint64_t get_file_size(const std::string& path) {

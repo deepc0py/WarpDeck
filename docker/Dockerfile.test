@@ -1,0 +1,45 @@
+# WarpDeck Linux Test Container
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create working directory
+WORKDIR /app
+
+# Copy source code
+COPY libwarpdeck /app/libwarpdeck
+COPY third_party /app/third_party
+
+# Build libwarpdeck (clean any existing build artifacts from host)
+WORKDIR /app/libwarpdeck
+RUN rm -rf build && mkdir -p build && cd build && \
+    cmake .. && \
+    make -j$(nproc)
+
+# Copy test program source
+COPY docker/mdns_test.cpp /app/mdns_test.cpp
+
+# Build test program
+WORKDIR /app
+RUN g++ -std=c++17 -o mdns_test mdns_test.cpp \
+    -I/app/libwarpdeck/include \
+    -I/app/third_party/mjansson_mdns \
+    -L/app/libwarpdeck/build \
+    -lwarpdeck \
+    -lssl -lcrypto -lpthread
+
+# Set library path
+ENV LD_LIBRARY_PATH=/app/libwarpdeck/build
+
+# Default command - run test
+CMD ["/app/mdns_test"]

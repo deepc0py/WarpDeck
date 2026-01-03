@@ -100,13 +100,25 @@ foreach(target warpdeck warpdeck_shared)
     target_compile_definitions(${target} PRIVATE ${PLATFORM_DEFINITIONS})
 endforeach()
 
-# Set shared library output name
-set_target_properties(warpdeck_shared PROPERTIES OUTPUT_NAME "warpdeck")
+# Set shared library output name and visibility
+set_target_properties(warpdeck_shared PROPERTIES 
+    OUTPUT_NAME "warpdeck"
+    C_VISIBILITY_PRESET default
+    CXX_VISIBILITY_PRESET default
+    VISIBILITY_INLINES_HIDDEN OFF
+)
+
+# Add export symbols on macOS
+if(APPLE)
+    set_target_properties(warpdeck_shared PROPERTIES
+        LINK_FLAGS "-exported_symbols_list ${CMAKE_CURRENT_SOURCE_DIR}/libwarpdeck.exp"
+    )
+endif()
 
 # Compiler-specific flags
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(warpdeck PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(warpdeck_shared PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(warpdeck_shared PRIVATE -Wall -Wextra -Wpedantic -fvisibility=default)
 endif()
 
 # Install targets

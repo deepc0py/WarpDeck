@@ -1,0 +1,14 @@
+_warpdeck_create
+_warpdeck_destroy
+_warpdeck_start
+_warpdeck_stop
+_warpdeck_set_device_name
+_warpdeck_initiate_transfer
+_warpdeck_respond_to_transfer
+_warpdeck_cancel_transfer
+_warpdeck_get_trusted_devices
+_warpdeck_remove_trusted_device
+_warpdeck_get_discovery_status
+_warpdeck_get_discovered_peers
+_warpdeck_get_mdns_debug_info
+_warpdeck_free_string

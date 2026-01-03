@@ -1,0 +1,53 @@
+version: '3.8'
+
+# Docker Compose for testing WarpDeck peer discovery
+# Creates multiple containers on the same network to test mDNS discovery
+
+services:
+  peer1:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    container_name: warpdeck-peer1
+    hostname: warpdeck-peer1
+    environment:
+      - DEVICE_NAME=Linux-Peer-1
+      - TEST_DURATION=30
+    networks:
+      - warpdeck_net
+
+  peer2:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    container_name: warpdeck-peer2
+    hostname: warpdeck-peer2
+    environment:
+      - DEVICE_NAME=Linux-Peer-2
+      - TEST_DURATION=30
+    networks:
+      - warpdeck_net
+    depends_on:
+      - peer1
+
+  peer3:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    container_name: warpdeck-peer3
+    hostname: warpdeck-peer3
+    environment:
+      - DEVICE_NAME=Linux-Peer-3
+      - TEST_DURATION=30
+    networks:
+      - warpdeck_net
+    depends_on:
+      - peer1
+      - peer2
+
+networks:
+  warpdeck_net:
+    driver: bridge
+    # Enable multicast on the network
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"

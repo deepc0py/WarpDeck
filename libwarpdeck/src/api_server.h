@@ -3,6 +3,7 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <thread>
 #include <httplib.h>
 
 namespace warpdeck {
@@ -16,6 +17,7 @@ struct DeviceInfo {
 
 struct FileMetadata {
     std::string name;
+    std::string relative_path;  // Optional: preserves folder structure (e.g., "MyMod/textures/skin.png")
     uint64_t size;
     std::string hash; // optional SHA256 hash
 };
@@ -57,13 +59,14 @@ private:
     std::string extract_client_fingerprint_from_ssl();
     
     std::unique_ptr<httplib::Server> server_;
+    std::thread server_thread_;  // Server thread with proper lifecycle management
     DeviceInfo device_info_;
     int port_;
     bool running_;
-    
+
     std::string cert_file_;
     std::string key_file_;
-    
+
     TransferRequestCallback transfer_request_callback_;
     FileUploadCallback file_upload_callback_;
 };
