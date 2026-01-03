@@ -63,7 +63,8 @@ jobs:
 
     - name: Install C++ dependencies
       run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
+        # Only OpenSSL is needed from vcpkg - nlohmann-json is fetched via CMake FetchContent
+        $VCPKG_ROOT/vcpkg install openssl
 
     - name: Build libwarpdeck
       run: |
@@ -314,8 +315,9 @@ jobs:
 
     - name: Install C++ dependencies
       run: |
-        $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
-        
+        # Only OpenSSL is needed from vcpkg - nlohmann-json is fetched via CMake FetchContent
+        $VCPKG_ROOT/vcpkg install openssl
+
     - name: Configure for older Linux compatibility
       run: |
         # Set flags for better compatibility with older Linux systems
