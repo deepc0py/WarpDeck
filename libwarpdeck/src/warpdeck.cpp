@@ -129,7 +129,23 @@ WarpDeckHandle* warpdeck_create(const Callbacks* callbacks, const char* config_d
                 char* json_copy = copy_string(json);  // Heap allocated with new[], Dart must call warpdeck_free_string()
                 safe_call_callback(handle->callbacks.on_incoming_transfer_request, json_copy);
             });
-        
+
+        // Set up transfer manager dependencies for sending
+        handle->transfer_manager->set_api_client(handle->api_client.get());
+        handle->transfer_manager->set_peer_lookup(
+            [handle = handle.get()](const std::string& device_id) -> PeerConnectionInfo {
+                auto peers = handle->discovery_manager->get_discovered_peers();
+                auto it = peers.find(device_id);
+                if (it != peers.end()) {
+                    PeerConnectionInfo info;
+                    info.host = it->second.host_address;
+                    info.port = it->second.port;
+                    info.fingerprint = it->second.fingerprint;
+                    return info;
+                }
+                return PeerConnectionInfo{};  // Empty info if not found
+            });
+
         // Set up API server callbacks
         handle->api_server->set_transfer_request_callback(
             [handle = handle.get()](const std::string& client_fingerprint,

@@ -1,5 +1,7 @@
 #include "transfer_manager.h"
+#include "api_client.h"
 #include "utils.h"
+#include "logger.h"
 #include <fstream>
 #include <filesystem>
 #include <iostream>
@@ -10,7 +12,22 @@ TransferManager::TransferManager() {
     download_folder_ = utils::get_default_download_dir();
 }
 
-TransferManager::~TransferManager() {}
+TransferManager::~TransferManager() {
+    // Wait for any active send threads to complete
+    for (auto& [id, thread] : send_threads_) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+}
+
+void TransferManager::set_api_client(APIClient* client) {
+    api_client_ = client;
+}
+
+void TransferManager::set_peer_lookup(PeerLookupCallback callback) {
+    peer_lookup_callback_ = callback;
+}
 
 void TransferManager::set_download_folder(const std::string& folder) {
     download_folder_ = folder;
@@ -50,14 +67,17 @@ std::string TransferManager::initiate_transfer(const std::string& peer_device_id
     transfer.peer_device_id = peer_device_id;
     transfer.peer_name = peer_name;
     transfer.direction = TransferDirection::SENDING;
-    transfer.status = TransferStatus::PENDING_APPROVAL;
+    transfer.status = TransferStatus::IN_PROGRESS;
     transfer.total_bytes = 0;
     transfer.transferred_bytes = 0;
+
+    std::vector<std::string> valid_file_paths;
 
     // Build file metadata
     for (size_t i = 0; i < file_paths.size(); ++i) {
         const auto& file_path = file_paths[i];
         if (!utils::file_exists(file_path)) {
+            LOG_CORE_WARN() << "File does not exist: " << file_path;
             continue;
         }
 
@@ -73,16 +93,25 @@ std::string TransferManager::initiate_transfer(const std::string& peer_device_id
 
         transfer.files.push_back(file_meta);
         transfer.total_bytes += file_meta.size;
+        valid_file_paths.push_back(file_path);
     }
 
     if (transfer.files.empty()) {
+        LOG_CORE_ERROR() << "No valid files to transfer";
         return ""; // No valid files
     }
 
     {
         std::lock_guard<std::mutex> lock(transfers_mutex_);
         active_transfers_[transfer_id] = transfer;
+        send_file_paths_[transfer_id] = valid_file_paths;
     }
+
+    LOG_CORE_INFO() << "Initiating transfer " << transfer_id << " to " << peer_name
+                    << " with " << transfer.files.size() << " files";
+
+    // Start the actual send in a background thread
+    send_threads_[transfer_id] = std::thread(&TransferManager::execute_send_transfer, this, transfer_id);
 
     return transfer_id;
 }
@@ -551,6 +580,164 @@ void TransferManager::cleanup_old_queue_entries() {
                 break;
             }
         }
+    }
+}
+
+void TransferManager::execute_send_transfer(const std::string& transfer_id) {
+    LOG_CORE_INFO() << "Starting send execution for transfer " << transfer_id;
+
+    // Get transfer info
+    TransferInfo transfer;
+    std::vector<std::string> file_paths;
+    {
+        std::lock_guard<std::mutex> lock(transfers_mutex_);
+        auto it = active_transfers_.find(transfer_id);
+        if (it == active_transfers_.end()) {
+            LOG_CORE_ERROR() << "Transfer not found: " << transfer_id;
+            return;
+        }
+        transfer = it->second;
+
+        auto paths_it = send_file_paths_.find(transfer_id);
+        if (paths_it == send_file_paths_.end()) {
+            LOG_CORE_ERROR() << "File paths not found for transfer: " << transfer_id;
+            return;
+        }
+        file_paths = paths_it->second;
+    }
+
+    // Check dependencies
+    if (!api_client_) {
+        LOG_CORE_ERROR() << "API client not set";
+        if (completion_callback_) {
+            completion_callback_(transfer_id, false, "Internal error: API client not configured");
+        }
+        return;
+    }
+
+    if (!peer_lookup_callback_) {
+        LOG_CORE_ERROR() << "Peer lookup callback not set";
+        if (completion_callback_) {
+            completion_callback_(transfer_id, false, "Internal error: Peer lookup not configured");
+        }
+        return;
+    }
+
+    // Look up peer connection info
+    PeerConnectionInfo peer_info = peer_lookup_callback_(transfer.peer_device_id);
+    if (peer_info.host.empty() || peer_info.port <= 0) {
+        LOG_CORE_ERROR() << "Could not find peer: " << transfer.peer_device_id;
+        if (completion_callback_) {
+            completion_callback_(transfer_id, false, "Peer not found or offline");
+        }
+        return;
+    }
+
+    LOG_CORE_INFO() << "Sending to peer at " << peer_info.host << ":" << peer_info.port;
+
+    // Build transfer request
+    TransferRequest request;
+    request.files = transfer.files;
+
+    // Step 1: Request transfer approval from peer
+    LOG_CORE_INFO() << "Requesting transfer approval...";
+    auto response = api_client_->request_transfer(peer_info.host, peer_info.port,
+                                                   peer_info.fingerprint, request);
+    if (!response.success) {
+        LOG_CORE_ERROR() << "Transfer request failed: " << response.error_message;
+        if (completion_callback_) {
+            completion_callback_(transfer_id, false, "Transfer request rejected: " + response.error_message);
+        }
+        return;
+    }
+
+    LOG_CORE_INFO() << "Transfer approved, starting file upload...";
+
+    // Step 2: Upload each file
+    uint64_t total_transferred = 0;
+    const size_t chunk_size = 1024 * 1024;  // 1MB chunks
+
+    for (size_t file_index = 0; file_index < file_paths.size(); ++file_index) {
+        const std::string& file_path = file_paths[file_index];
+        const FileMetadata& file_meta = transfer.files[file_index];
+
+        LOG_CORE_INFO() << "Uploading file " << (file_index + 1) << "/" << file_paths.size()
+                        << ": " << file_meta.name << " (" << file_meta.size << " bytes)";
+
+        // Read file in chunks and upload
+        std::ifstream file(file_path, std::ios::binary);
+        if (!file) {
+            LOG_CORE_ERROR() << "Failed to open file: " << file_path;
+            if (completion_callback_) {
+                completion_callback_(transfer_id, false, "Failed to read file: " + file_meta.name);
+            }
+            return;
+        }
+
+        std::vector<uint8_t> buffer(chunk_size);
+        uint64_t file_transferred = 0;
+
+        while (file_transferred < file_meta.size) {
+            size_t to_read = std::min(chunk_size, static_cast<size_t>(file_meta.size - file_transferred));
+            file.read(reinterpret_cast<char*>(buffer.data()), to_read);
+            size_t actually_read = file.gcount();
+
+            if (actually_read == 0) {
+                break;  // EOF
+            }
+
+            // Resize buffer to actual read size
+            std::vector<uint8_t> chunk(buffer.begin(), buffer.begin() + actually_read);
+
+            // Upload chunk
+            auto upload_response = api_client_->upload_file(
+                peer_info.host, peer_info.port, peer_info.fingerprint,
+                transfer_id, static_cast<int>(file_index), chunk);
+
+            if (!upload_response.success) {
+                LOG_CORE_ERROR() << "File upload failed: " << upload_response.error_message;
+                if (completion_callback_) {
+                    completion_callback_(transfer_id, false, "Upload failed: " + upload_response.error_message);
+                }
+                return;
+            }
+
+            file_transferred += actually_read;
+            total_transferred += actually_read;
+
+            // Update progress
+            {
+                std::lock_guard<std::mutex> lock(transfers_mutex_);
+                auto it = active_transfers_.find(transfer_id);
+                if (it != active_transfers_.end()) {
+                    it->second.transferred_bytes = total_transferred;
+                }
+            }
+
+            if (progress_callback_) {
+                float progress = transfer.total_bytes > 0 ?
+                    (static_cast<float>(total_transferred) / transfer.total_bytes) * 100.0f : 0.0f;
+                progress_callback_(transfer_id, progress, total_transferred);
+            }
+        }
+
+        file.close();
+        LOG_CORE_INFO() << "Completed file: " << file_meta.name;
+    }
+
+    // Mark as completed
+    {
+        std::lock_guard<std::mutex> lock(transfers_mutex_);
+        auto it = active_transfers_.find(transfer_id);
+        if (it != active_transfers_.end()) {
+            it->second.status = TransferStatus::COMPLETED;
+        }
+        send_file_paths_.erase(transfer_id);
+    }
+
+    LOG_CORE_INFO() << "Transfer completed successfully: " << transfer_id;
+    if (completion_callback_) {
+        completion_callback_(transfer_id, true, "");
     }
 }
 

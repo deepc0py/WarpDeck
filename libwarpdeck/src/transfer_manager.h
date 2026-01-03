@@ -9,9 +9,19 @@
 #include <atomic>
 #include <mutex>
 #include <chrono>
+#include <thread>
 #include "api_server.h"
 
 namespace warpdeck {
+
+class APIClient;
+
+// Peer info for sending transfers
+struct PeerConnectionInfo {
+    std::string host;
+    int port;
+    std::string fingerprint;
+};
 
 enum class TransferDirection {
     SENDING,
@@ -70,9 +80,14 @@ public:
     using CompletionCallback = std::function<void(const std::string& transfer_id, bool success, const std::string& error_message)>;
     using IncomingRequestCallback = std::function<void(const std::string& transfer_id, const std::string& peer_name, const std::vector<FileMetadata>& files)>;
     using QueueStatusCallback = std::function<void(const std::string& queue_id, int position, int total)>;
+    using PeerLookupCallback = std::function<PeerConnectionInfo(const std::string& device_id)>;
 
     TransferManager();
     ~TransferManager();
+
+    // Set dependencies for sending
+    void set_api_client(APIClient* client);
+    void set_peer_lookup(PeerLookupCallback callback);
 
     void set_download_folder(const std::string& folder);
     void set_progress_callback(ProgressCallback callback);
@@ -120,9 +135,14 @@ private:
     void notify_queue_positions();
     void cleanup_old_queue_entries();
 
+    // Actual file sending (runs in background thread)
+    void execute_send_transfer(const std::string& transfer_id);
+
     mutable std::mutex transfers_mutex_;
     std::map<std::string, TransferInfo> active_transfers_;
     std::map<std::string, std::vector<std::string>> temp_file_paths_;
+    std::map<std::string, std::vector<std::string>> send_file_paths_;  // Original paths for sending
+    std::map<std::string, std::thread> send_threads_;  // Background send threads
 
     // Queue members
     mutable std::mutex queue_mutex_;
@@ -134,6 +154,8 @@ private:
     CompletionCallback completion_callback_;
     IncomingRequestCallback incoming_request_callback_;
     QueueStatusCallback queue_status_callback_;
+    PeerLookupCallback peer_lookup_callback_;
+    APIClient* api_client_ = nullptr;
 };
 
 } // namespace warpdeck
