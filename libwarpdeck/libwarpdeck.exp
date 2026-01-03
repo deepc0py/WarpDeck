@@ -12,3 +12,6 @@ _warpdeck_get_discovery_status
 _warpdeck_get_discovered_peers
 _warpdeck_get_mdns_debug_info
 _warpdeck_free_string
+_warpdeck_queue_transfer
+_warpdeck_cancel_queued_transfer
+_warpdeck_get_queue_status
