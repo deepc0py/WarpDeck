@@ -60,7 +60,8 @@ jobs:
 
       - name: Install dependencies with vcpkg
         run: |
-          $VCPKG_ROOT/vcpkg install boost-asio openssl nlohmann-json
+          # Only OpenSSL is needed from vcpkg - nlohmann-json is fetched via CMake FetchContent
+          $VCPKG_ROOT/vcpkg install openssl
 
       - name: Cache libwarpdeck build
         uses: actions/cache@v4
