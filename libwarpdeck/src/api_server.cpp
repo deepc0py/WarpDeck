@@ -167,8 +167,10 @@ void APIServer::setup_routes() {
             
             // Handle through callback
             if (transfer_request_callback_) {
-                transfer_request_callback_(client_fingerprint, transfer_req, 
+                std::cout << "[APIServer] Calling transfer_request_callback_..." << std::endl;
+                transfer_request_callback_(client_fingerprint, transfer_req,
                     [&res](bool approved, const std::string& transfer_id) {
+                        std::cout << "[APIServer] Response callback invoked: approved=" << approved << std::endl;
                         if (approved) {
                             TransferSession session;
                             session.transfer_id = transfer_id;
@@ -183,11 +185,13 @@ void APIServer::setup_routes() {
                             res.status = 202;
                             res.set_content(response_json.dump(), "application/json");
                         } else {
+                            std::cout << "[APIServer] Setting response: 403 USER_DECLINED" << std::endl;
                             res.status = 403;
-                            res.set_content("{\"error_code\":\"USER_DECLINED\",\"message\":\"Transfer declined by user\"}", 
+                            res.set_content("{\"error_code\":\"USER_DECLINED\",\"message\":\"Transfer declined by user\"}",
                                            "application/json");
                         }
                     });
+                std::cout << "[APIServer] transfer_request_callback_ completed, res.status=" << res.status << std::endl;
             } else {
                 res.status = 500;
                 res.set_content("{\"error_code\":\"SERVER_ERROR\",\"message\":\"No transfer handler configured\"}", 
