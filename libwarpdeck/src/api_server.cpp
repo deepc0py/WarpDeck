@@ -105,10 +105,20 @@ void APIServer::set_ssl_certificate(const std::string& cert_file, const std::str
 
 void APIServer::setup_routes() {
     if (!server_) {
+        std::cerr << "[APIServer] ERROR: server_ is null in setup_routes!" << std::endl;
         return;
     }
-    
+
+    std::cout << "[APIServer] Registering routes..." << std::endl;
+
+    // Log all incoming requests for debugging
+    server_->set_logger([](const httplib::Request& req, const httplib::Response& res) {
+        std::cout << "[APIServer] Request: " << req.method << " " << req.path
+                  << " -> " << res.status << std::endl;
+    });
+
     // GET /health - Health check endpoint
+    std::cout << "[APIServer] Registering GET /health" << std::endl;
     server_->Get("/health", [this](const httplib::Request& /* req */, httplib::Response& res) {
         try {
             nlohmann::json health_response;
@@ -126,6 +136,7 @@ void APIServer::setup_routes() {
     });
     
     // GET /api/v1/info - Device information endpoint
+    std::cout << "[APIServer] Registering GET /api/v1/info" << std::endl;
     server_->Get("/api/v1/info", [this](const httplib::Request& /* req */, httplib::Response& res) {
         try {
             std::string json = utils::device_info_to_json(device_info_);
@@ -138,7 +149,9 @@ void APIServer::setup_routes() {
     });
     
     // POST /api/v1/transfer/request - Transfer request endpoint
+    std::cout << "[APIServer] Registering POST /api/v1/transfer/request" << std::endl;
     server_->Post("/api/v1/transfer/request", [this](const httplib::Request& req, httplib::Response& res) {
+        std::cout << "[APIServer] POST /api/v1/transfer/request handler called!" << std::endl;
         try {
             // Parse request body
             TransferRequest transfer_req;
@@ -189,6 +202,7 @@ void APIServer::setup_routes() {
     });
     
     // POST /api/v1/transfer/{transfer_id}/{file_index} - File upload endpoint
+    std::cout << "[APIServer] Registering POST /api/v1/transfer/{id}/{index}" << std::endl;
     server_->Post(R"(/api/v1/transfer/([^/]+)/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
         try {
             std::string transfer_id = req.matches[1];
@@ -222,11 +236,15 @@ void APIServer::setup_routes() {
     });
     
     // Set error handler
-    server_->set_error_handler([](const httplib::Request& /* req */, httplib::Response& res) {
+    std::cout << "[APIServer] Setting error handler" << std::endl;
+    server_->set_error_handler([](const httplib::Request& req, httplib::Response& res) {
+        std::cerr << "[APIServer] ERROR HANDLER: " << req.method << " " << req.path << " - 404 Not Found" << std::endl;
         res.status = 404;
-        res.set_content("{\"error_code\":\"NOT_FOUND\",\"message\":\"Endpoint not found\"}", 
+        res.set_content("{\"error_code\":\"NOT_FOUND\",\"message\":\"Endpoint not found\"}",
                        "application/json");
     });
+
+    std::cout << "[APIServer] All routes registered successfully!" << std::endl;
 }
 
 std::string APIServer::extract_client_fingerprint_from_ssl() {
