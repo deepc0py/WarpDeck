@@ -704,17 +704,20 @@ void MdnsManager::process_peer_timeout() {
 
 std::string MdnsManager::sockaddr_to_string(const struct sockaddr* addr) {
     char str[INET6_ADDRSTRLEN];
-    
+
     if (addr->sa_family == AF_INET) {
         const struct sockaddr_in* addr_in = (const struct sockaddr_in*)addr;
         inet_ntop(AF_INET, &addr_in->sin_addr, str, INET_ADDRSTRLEN);
-        return std::string(str) + ":" + std::to_string(ntohs(addr_in->sin_port));
+        // Return only the IP address, not the port (which would be mDNS port 5353)
+        // The actual service port comes from the SRV record
+        return std::string(str);
     } else if (addr->sa_family == AF_INET6) {
         const struct sockaddr_in6* addr_in6 = (const struct sockaddr_in6*)addr;
         inet_ntop(AF_INET6, &addr_in6->sin6_addr, str, INET6_ADDRSTRLEN);
-        return std::string("[") + str + "]:" + std::to_string(ntohs(addr_in6->sin6_port));
+        // Return only the IP address without port
+        return std::string(str);
     }
-    
+
     return "unknown";
 }
 
