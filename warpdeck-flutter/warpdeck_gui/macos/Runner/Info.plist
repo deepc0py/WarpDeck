@@ -34,6 +34,10 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>WarpDeck uses local network to discover nearby devices for file sharing.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_warpdeck._tcp</string>
+	</array>
 	<key>NSNetworkUsageDescription</key>
 	<string>WarpDeck requires network access for peer-to-peer file transfers.</string>
 	<key>LSApplicationCategoryType</key>
