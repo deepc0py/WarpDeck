@@ -21,7 +21,8 @@ bool validate_system_dependencies() {
     bool avahi_common_found = false;
     
     for (const auto& lib : required_libs) {
-        void* handle = dlopen(lib.c_str(), RTLD_LAZY | RTLD_NOLOAD);
+        // Use RTLD_LAZY only - RTLD_NOLOAD was wrong (only checks already-loaded libs)
+        void* handle = dlopen(lib.c_str(), RTLD_LAZY);
         if (handle) {
             dlclose(handle);
             // Track which critical libraries we found

@@ -107,8 +107,16 @@
       "Bash(VM_TESTING_GUIDE.md )",
       "Bash(BUILD_TRIGGER.md )",
       "Bash(LOCAL_BUILD_GUIDE.md )",
-      "Bash(MACOS_BUILD_FIX.md )"
+      "Bash(MACOS_BUILD_FIX.md )",
+      "Bash(/Users/jesse/code/WarpDeck/warpdeck-flutter/warpdeck_gui/build/macos/Build/Products/Release/warpdeck_gui.app/Contents/MacOS/warpdeck_gui)",
+      "Bash(DYLD_PRINT_LIBRARIES=1 timeout 5 /Users/jesse/code/WarpDeck/warpdeck-flutter/warpdeck_gui/build/macos/Build/Products/Release/warpdeck_gui.app/Contents/MacOS/warpdeck_gui:*)",
+      "Bash(codesign:*)",
+      "Bash(tmux kill-session:*)",
+      "Bash(tmux new-session:*)",
+      "Bash(tmux send-keys:*)",
+      "Bash(tmux capture-pane:*)"
     ],
     "deny": []
-  }
+  },
+  "outputStyle": "Explanatory"
 }
